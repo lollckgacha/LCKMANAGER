@@ -8,7 +8,7 @@ const DATA = {
     { id: 'injured', label: '부상', starsMod: -2, color: 'text-red-600' }
   ],
   teams: [
-    { id: 'HLE', name: 'Hanwha Life Esports', color: '#f37321', logo: 'logo/HLE.svg' },
+    { id: 'HLE', name: 'Hanwha Life Esports', color: '#f37321', logo: 'logo/hle.svg' },
     { id: 'T1', name: 'T1', color: '#e2012d', logo: 'logo/t1.svg' },
     { id: 'GEN', name: 'GEN.G', color: '#cfb887', logo: 'logo/gen.svg' },
     { id: 'KT', name: 'KT Rolster', color: '#ff0a07', logo: 'logo/kt.svg' },
