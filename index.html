@@ -24,6 +24,7 @@
     </script>
     <style>
         body { background-color: #0a0a0c; color: #f0e6d2; overflow: hidden; user-select: none; }
+        .selectable-text { user-select: text !important; cursor: text !important; pointer-events: auto; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1c1c1f; }
         ::-webkit-scrollbar-thumb { background: #c89b3c; border-radius: 3px; }
@@ -34,9 +35,9 @@
         .view-section.active { display: flex; flex-direction: column; }
 
         /* Toast */
-        #ui-toast { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .toast-hidden { transform: translate(-50%, -150%); }
-        .toast-visible { transform: translate(-50%, 0); }
+        #ui-toast { transition: opacity 0.3s ease, transform 0.3s ease; }
+        .toast-hidden { opacity: 0; transform: translate(-50%, -20px); pointer-events: none; }
+        .toast-visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
 
         /* Roster Drag & Drop */
         .drop-zone { border: 2px dashed transparent; transition: all 0.2s; }
@@ -47,7 +48,7 @@
         /* Draft */
         .champ-portrait { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid #333; }
         .champ-item { cursor: pointer; transition: all 0.2s; position: relative; }
-        .champ-item:hover { transform: translateY(-2px); border-color: #c89b3c; }
+        .champ-item:hover { transform: translateY(-2px); border-color: #c89b3c; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .champ-item.selected { border: 2px solid #c89b3c; box-shadow: 0 0 10px rgba(200,155,60,0.5); }
         .champ-item.banned { filter: grayscale(100%); opacity: 0.3; pointer-events: none; }
         .champ-item.picked { opacity: 0.3; pointer-events: none; }
@@ -60,46 +61,41 @@
         .cal-cell { min-height: 100px; }
         .cal-today { border-color: #c89b3c !important; background-color: rgba(200,155,60,0.1); }
 
-        /* Kill Log (우측에서 좌측으로) */
-        #kill-log-container { position: absolute; top: 4.5rem; right: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 50; width: 320px; align-items: flex-end; pointer-events: none;}
-        .kill-log-item { display: flex; justify-content: center; align-items: center; gap: 0.75rem; background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(20,20,20,0.9) 30%, rgba(10,10,10,0.95) 100%); padding: 0.3rem 0.5rem 0.3rem 2rem; border-right: 4px solid; border-radius: 4px; animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 3.5s forwards; box-shadow: -4px 4px 10px rgba(0,0,0,0.5); backdrop-filter: blur(4px);}
-        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
+        /* Draft Animation Overlay */
+        #bp-anim-overlay { transition: opacity 0.3s; opacity: 0; pointer-events: none; }
+        #bp-anim-overlay.active { opacity: 1; pointer-events: auto; }
+        #bp-anim-card { transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s, border-color 0.3s; border: 4px solid transparent; border-radius: 8px; overflow: hidden; background-color: #000; }
+        .anim-zoom { transform: scale(1.8); }
+        .anim-fly-ban { transform: scale(0.2) translate(-500px, -500px); opacity: 0; }
+        .anim-fly-pick { transform: scale(0.2) translate(0, -500px); opacity: 0; }
+        .anim-ban-slash { display: block !important; animation: slashAnim 0.3s ease-out forwards; }
+        .anim-grayscale { filter: grayscale(100%); opacity: 0.5; }
         
+        .anim-glow-ban { border-color: #ff4e50 !important; box-shadow: 0 0 40px rgba(255, 78, 80, 0.9) !important; }
+        .anim-glow-pick { border-color: #0bc6e3 !important; box-shadow: 0 0 40px rgba(11, 198, 227, 0.9) !important; }
+        
+        @keyframes slashAnim { 0% { width: 0; opacity: 0; } 100% { width: 150%; opacity: 1; left: -25%; top: 50%; } }
+
         /* Announcer */
-        #announcer-container { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); z-index: 60; text-align: center; pointer-events: none; display: flex; flex-direction: column; gap: 1rem; align-items: center;}
+        #announcer-container { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); z-index: 60; text-align: center; pointer-events: none; display: flex; flex-direction: column; gap: 1rem; align-items: center;}
         .announcer-text { font-size: 4rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 0.1em; text-shadow: 0 0 20px rgba(0,0,0,1), 0 0 40px rgba(0,0,0,1); animation: zoomInOut 3s ease-in-out forwards; }
         @keyframes zoomInOut { 0% { transform: scale(0.5); opacity: 0; } 10% { transform: scale(1); opacity: 1; } 80% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.1); opacity: 0; } }
 
-        /* Minimap Tower Pulse */
-        @keyframes towerDestroy { 0% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); } 50% { transform: translate(-50%, -50%) scale(2.5); filter: brightness(2); background-color: white;} 100% { transform: translate(-50%, -50%) scale(0); opacity: 0; display: none; } }
-        .minimap-tower.destroyed { animation: towerDestroy 0.8s ease-out forwards; pointer-events: none; }
-        .minimap-tower { position: absolute; transform: translate(-50%, -50%); transition: opacity 0.5s; }
-        .tower-icon { width: 12px; height: 12px; border-radius: 2px; border: 1.5px solid #222; }
-        .tower-icon.blue { background-color: #0bc6e3; box-shadow: 0 0 4px #0bc6e3; }
-        .tower-icon.red { background-color: #ff4e50; box-shadow: 0 0 4px #ff4e50; }
-        .inhib-icon { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #222; }
-        .inhib-icon.blue { background-color: #0bc6e3; box-shadow: 0 0 6px #0bc6e3; }
-        .inhib-icon.red { background-color: #ff4e50; box-shadow: 0 0 6px #ff4e50; }
-        .nexus-icon { width: 24px; height: 24px; border-radius: 50%; border: 3px solid #222; }
-        .nexus-icon.blue { background-color: #0bc6e3; box-shadow: 0 0 8px #0bc6e3; }
-        .nexus-icon.red { background-color: #ff4e50; box-shadow: 0 0 8px #ff4e50; }
-
         /* Kill Log Containers */
-        .kill-log-container { position: absolute; top: 4.5rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 50; width: 320px; pointer-events: none; }
-        #kill-log-left { left: 1.5rem; align-items: flex-start; }
-        #kill-log-right { right: 1.5rem; align-items: flex-end; }
+        .kill-log-wrapper { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.5rem; z-index: 50; width: 280px; pointer-events: none; }
+        #kill-log-left { right: calc(50% + 220px); align-items: flex-end; }
+        #kill-log-right { left: calc(50% + 220px); align-items: flex-start; }
         
-        .kill-log-item { display: flex; justify-content: center; align-items: center; gap: 0.75rem; background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(20,20,20,0.9) 30%, rgba(10,10,10,0.95) 100%); padding: 0.3rem 0.5rem 0.3rem 2rem; border-radius: 4px; animation: slideIn 0.3s ease-out, fadeOut 0.5s ease-in 3.5s forwards; box-shadow: 0 4px 10px rgba(0,0,0,0.5); backdrop-filter: blur(4px);}
-        #kill-log-left .kill-log-item { background: linear-gradient(270deg, rgba(0,0,0,0) 0%, rgba(20,20,20,0.9) 30%, rgba(10,10,10,0.95) 100%); border-left: 4px solid #0bc6e3; padding: 0.3rem 2rem 0.3rem 0.5rem; flex-direction: row-reverse; }
-        #kill-log-right .kill-log-item { border-right: 4px solid #ff4e50; }
-        
-        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .kill-log-item { display: flex; justify-content: center; align-items: center; gap: 0.5rem; background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(20,20,20,0.9) 50%, rgba(0,0,0,0.7) 100%); padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #444; animation: slideDown 0.3s ease-out, fadeOut 0.5s ease-in 3.5s forwards; box-shadow: 0 4px 10px rgba(0,0,0,0.7); backdrop-filter: blur(4px);}
+        .kill-log-item.blue-kill { border-color: #0bc6e3; box-shadow: inset 0 0 15px rgba(11,198,227,0.3); flex-direction: row; }
+        .kill-log-item.red-kill { border-color: #ff4e50; box-shadow: inset 0 0 15px rgba(255,78,80,0.3); flex-direction: row-reverse; }
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; visibility: hidden; margin-top: -50px; } }
 
         /* Minimap Tower Pulse */
         @keyframes towerDestroy { 0% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); } 50% { transform: translate(-50%, -50%) scale(2.5); filter: brightness(2); background-color: white;} 100% { transform: translate(-50%, -50%) scale(0); opacity: 0; display: none; } }
         .minimap-tower.destroyed { animation: towerDestroy 0.8s ease-out forwards; pointer-events: none; }
-        .minimap-tower { position: absolute; transform: translate(-50%, -50%); transition: opacity 0.5s; }
+        .minimap-tower { position: absolute; transform: translate(-50%, -50%); transition: opacity 0.5s; z-index: 10; }
         .tower-icon { width: 12px; height: 12px; border-radius: 2px; border: 1.5px solid #222; }
         .tower-icon.blue { background-color: #0bc6e3; box-shadow: 0 0 4px #0bc6e3; }
         .tower-icon.red { background-color: #ff4e50; box-shadow: 0 0 4px #ff4e50; }
@@ -110,12 +106,21 @@
         .nexus-icon.blue { background-color: #0bc6e3; box-shadow: 0 0 8px #0bc6e3; }
         .nexus-icon.red { background-color: #ff4e50; box-shadow: 0 0 8px #ff4e50; }
         
+        .spd-btn.active { background-color: #e5e7eb !important; color: #000 !important; border-color: #e5e7eb !important; box-shadow: 0 0 8px rgba(255,255,255,0.5); }
+
+        .pip { width: 12px; height: 12px; border: 2px solid #fff; transition: background-color 0.3s; }
+        .pip.filled { background-color: #fff; }
+        .pip.empty { background-color: #000; }
+
+        .player-panel { background: linear-gradient(90deg, rgba(15,15,20,0.95) 0%, rgba(10,10,15,0.8) 100%); border-right: 2px solid #222; }
+        .player-panel-red { background: linear-gradient(270deg, rgba(15,15,20,0.95) 0%, rgba(10,10,15,0.8) 100%); border-left: 2px solid #222; }
+        .ingame-portrait { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #555; }
     </style>
 </head>
 <body>
 
     <!-- Toast UI -->
-    <div id="ui-toast" class="fixed top-0 left-1/2 toast-hidden z-[200] mt-6 px-6 py-3 rounded-lg shadow-xl font-bold text-white text-center"></div>
+    <div id="ui-toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-lg shadow-xl font-bold text-white text-center toast-hidden"></div>
 
     <!-- SCREEN 0: LOADING -->
     <div id="screen-loading" class="screen active items-center justify-center bg-lck-dark relative">
@@ -139,7 +144,36 @@
             <p class="text-gray-300 mb-8 text-lg" id="modal-match-text">오늘 경기가 있습니다.<br>밴픽을 시작하시겠습니까?</p>
             <div class="flex gap-4 justify-center w-full">
                 <button onclick="app.closeMatchModal()" class="flex-1 py-3 bg-gray-800 border border-gray-600 text-gray-400 font-bold rounded hover:bg-gray-700 hover:text-white transition">조금 더 준비하기</button>
-                <button onclick="app.confirmMatchModal()" class="flex-1 py-3 bg-lck-accent text-black font-bold rounded hover:bg-yellow-500 transition shadow-[0_0_15px_rgba(200,155,60,0.4)]">밴픽 시작</button>
+                <button onclick="app.confirmMatchModal()" class="flex-1 py-3 bg-lck-accent text-black font-bold rounded hover:bg-yellow-500 transition shadow-[0_0_15px_rgba(200,155,60,0.4)]">경기 시작</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Detail Modal -->
+    <div id="modal-match-detail" class="hidden fixed inset-0 bg-black/80 z-[200] flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-gray-900 border border-gray-600 rounded-xl w-[700px] max-h-[80vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-xl">
+                <h3 class="text-xl font-bold text-white tracking-widest">경기 기록 상세</h3>
+                <button onclick="app.closeMatchDetailModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-6" id="match-detail-content">
+                <!-- Data injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Select Modal -->
+    <div id="modal-side-select" class="hidden fixed inset-0 bg-black/80 z-[200] flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-lck-panel border-2 border-white p-8 rounded-xl w-[500px] text-center shadow-2xl">
+            <h3 class="text-2xl font-black text-white mb-2 tracking-widest">진영 선택</h3>
+            <p class="text-gray-400 mb-8 text-sm" id="side-select-desc">다음 세트의 진영을 선택해주십시오.</p>
+            <div class="flex gap-6 justify-center w-full">
+                <button onclick="app.confirmSideSelect('B')" class="flex-1 py-6 bg-gray-800 border-2 border-lck-blue text-white font-bold rounded hover:bg-blue-900 transition flex flex-col items-center gap-2">
+                    <span class="text-2xl text-lck-blue">BLUE</span>
+                </button>
+                <button onclick="app.confirmSideSelect('R')" class="flex-1 py-6 bg-gray-800 border-2 border-lck-red text-white font-bold rounded hover:bg-red-900 transition flex flex-col items-center gap-2">
+                    <span class="text-2xl text-lck-red">RED</span>
+                </button>
             </div>
         </div>
     </div>
@@ -147,19 +181,34 @@
     <!-- SCREEN 1: TITLE -->
     <div id="screen-title" class="screen items-center justify-center bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-20 bg-cover relative">
         <div class="absolute inset-0 bg-black/80"></div>
-        <div class="z-10 flex flex-col items-center gap-8">
+        <div class="z-10 flex flex-col items-center gap-4 text-center">
+            <img src="logo.svg" onerror="this.style.display='none'" class="h-24 mb-2 drop-shadow-lg" alt="Logo">
             <h1 class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-lck-accent to-yellow-200 tracking-tighter drop-shadow-lg">
                 LCK 매니저
             </h1>
-            <p class="text-xl text-gray-400 tracking-widest">LEAVE YOUR MARK</p>
+            <p class="text-xl text-gray-400 tracking-widest mb-4">LEAVE YOUR MARK</p>
             
-            <div class="flex flex-col gap-4 mt-12 w-80">
+            <div class="flex flex-col gap-4 mt-8 w-80">
                 <button onclick="app.startNewGameSetup()" class="bg-lck-accent hover:bg-lck-accentHover text-lck-dark font-bold py-4 rounded-lg text-lg transition shadow-[0_0_15px_rgba(200,155,60,0.5)]">
                     새로 시작
                 </button>
-                <button id="btn-continue" onclick="app.loadGame()" class="bg-lck-panel border border-gray-600 text-gray-400 font-bold py-4 rounded-lg text-lg transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <button id="btn-continue" onclick="app.loadGame()" class="bg-lck-panel border border-gray-600 text-gray-400 font-bold py-4 rounded-lg text-lg transition hover:text-white hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                     이어 하기
                 </button>
+            </div>
+
+            <div class="w-full max-w-sm mt-6 bg-black p-4 rounded-xl border border-lck-accent text-left shadow-[0_0_15px_rgba(200,155,60,0.15)] selectable-text relative z-20">
+                <h3 class="font-extrabold text-lck-accent mb-2 text-sm border-b border-gray-800 pb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-bullhorn"></i> 제작자 공지사항
+                </h3>
+                <ul class="list-disc pl-5 space-y-1.5 text-xs text-white font-medium leading-relaxed transition-colors">
+                    <li>데이터 최신화 요청, 버그 제보, 각종 피드백 및 아이디어 제공은 아래 이메일로 제보 부탁드립니다.</li>
+                    <li>각종 문의: <span class="text-lck-accent font-bold">lollckgacha@gmail.com</span></li>
+                </ul>
+            </div>
+            
+            <div class="mt-8 text-sm text-gray-500 selectable-text bg-black/50 px-4 py-2 rounded-full border border-gray-800 relative z-20">
+                
             </div>
         </div>
     </div>
@@ -190,7 +239,7 @@
                 <h1 class="text-xl font-bold text-white tracking-wide"><span id="top-team-name">T1</span> <span class="text-sm font-normal text-gray-400">Head Coach</span></h1>
             </div>
             <div class="flex items-center gap-6">
-                <!-- 사운드 토글 버튼 추가 -->
+                <!-- 사운드 토글 버튼 -->
                 <button onclick="sfx.toggle()" id="btn-sound-toggle" class="text-gray-400 hover:text-white px-3 transition">
                     <i id="icon-sound" class="fa-solid fa-volume-xmark text-xl"></i>
                 </button>
@@ -207,7 +256,7 @@
 
         <div class="flex flex-1 overflow-hidden">
             <!-- Sidebar Navigation -->
-            <aside class="w-64 bg-lck-panel border-r border-gray-800 flex flex-col p-4 gap-2 shrink-0">
+            <aside id="main-sidebar" class="w-64 bg-lck-panel border-r border-gray-800 flex flex-col p-4 gap-2 shrink-0 transition-all duration-300">
                 <button onclick="app.switchTab('dashboard')" class="nav-btn active flex items-center gap-3 p-3 rounded bg-gray-800 text-white font-medium transition text-left">
                     <i class="fa-solid fa-house w-5 text-center"></i> 홈 (대시보드)
                 </button>
@@ -220,11 +269,15 @@
                 <button onclick="app.switchTab('standings')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
                     <i class="fa-solid fa-list-ol w-5 text-center"></i> 리그 순위
                 </button>
+                <button onclick="app.switchTab('champstats')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
+                    <i class="fa-solid fa-chart-simple w-5 text-center"></i> 챔피언 통계
+                </button>
                 
-                <div class="mt-auto pt-4 border-t border-gray-800 flex flex-col gap-2">
+                <div class="mt-auto pt-4 border-t border-gray-800 flex flex-col gap-2 relative z-20">
                     <button onclick="app.saveGame()" class="flex items-center gap-3 p-3 rounded text-gray-400 hover:text-lck-accent transition text-left">
                         <i class="fa-regular fa-floppy-disk w-5 text-center"></i> 게임 저장하기
                     </button>
+                    <div class="text-[11px] text-gray-500 mt-2 text-center selectable-text bg-black/40 py-1.5 rounded">문의: lollckgacha@gmail.com</div>
                 </div>
             </aside>
 
@@ -237,7 +290,7 @@
                         <!-- News Feed -->
                         <div class="col-span-2 bg-lck-panel border border-gray-800 rounded-lg p-5 flex flex-col">
                             <h3 class="text-lg font-bold text-white border-b border-gray-700 pb-2 mb-4 flex justify-between">
-                                <span><i class="fa-regular fa-newspaper mr-2 text-lck-accent"></i>LCK 뉴스 투데이</span>
+                                <span><i class="fa-regular fa-newspaper mr-2 text-lck-accent"></i>LCK 뉴스</span>
                             </h3>
                             <div id="news-feed" class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3">
                                 <!-- News items injected -->
@@ -259,17 +312,16 @@
                                         <div class="text-xs font-bold mt-1" id="dash-enemy-name">GEN</div>
                                     </div>
                                 </div>
-                                <button id="btn-start-match-dash" onclick="app.initDraft()" class="w-full bg-lck-accent text-black font-bold py-2 rounded hidden hover:bg-yellow-500">경기 시작 (밴픽)</button>
+                                <button id="btn-start-match-dash" onclick="app.confirmMatchModal()" class="w-full bg-lck-accent text-black font-bold py-2 rounded hidden hover:bg-yellow-500">경기 시작 (밴픽)</button>
                                 <div id="msg-wait-match" class="text-center text-sm text-gray-500 hidden">일정을 진행해주세요.</div>
                             </div>
                             
                             <!-- Mini Standings -->
                             <div class="bg-lck-panel border border-gray-800 rounded-lg p-5 flex-1 flex flex-col">
-                                <h3 class="text-sm font-bold text-white border-b border-gray-700 pb-2 mb-2">정규시즌 순위</h3>
+                                <h3 class="text-sm font-bold text-white border-b border-gray-700 pb-2 mb-2">시즌 성적 요약</h3>
                                 <div id="dash-standings" class="flex-1 flex flex-col gap-2 text-sm overflow-y-auto pr-2">
                                     <!-- Standings injected -->
                                 </div>
-                                <button onclick="app.switchTab('standings')" class="text-xs text-gray-400 hover:text-white mt-2 text-right">전체 보기 &gt;</button>
                             </div>
                         </div>
                     </div>
@@ -300,7 +352,7 @@
                     <div class="flex justify-between items-end mb-6">
                         <div>
                             <h2 class="text-2xl font-bold text-white mb-2">경기 일정</h2>
-                            <p class="text-sm text-gray-400" id="schedule-phase-info">현재 진행: 정규시즌 1, 2 라운드</p>
+                            <p class="text-sm text-gray-400" id="schedule-phase-info">현재 진행: R1</p>
                         </div>
                     </div>
 
@@ -321,9 +373,11 @@
                 </section>
 
                 <!-- Tab: Standings -->
-                <section id="view-standings" class="view-section">
-                    <h2 class="text-2xl font-bold text-white mb-6">LCK 정규시즌 순위</h2>
-                    <div class="bg-lck-panel rounded-lg border border-gray-800 max-w-4xl">
+                <section id="view-standings" class="view-section gap-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-2">LCK 리그 순위</h2>
+                    </div>
+                    <div class="bg-lck-panel rounded-lg border border-gray-800 max-w-4xl shrink-0 flex-1 overflow-y-auto">
                         <table class="w-full text-center border-collapse">
                             <thead>
                                 <tr class="bg-gray-800 text-gray-400 text-sm border-b border-gray-700">
@@ -340,14 +394,59 @@
                         </table>
                     </div>
                 </section>
+                
+                <!-- Tab: Champ Stats -->
+                <section id="view-champstats" class="view-section gap-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-2xl font-bold text-white">챔피언 통계</h2>
+                        <div class="flex gap-1" id="stat-role-filters">
+                            <button onclick="app.filterChampStats('ALL')" class="stat-role-btn active px-4 py-1.5 rounded bg-gray-700 text-white text-sm font-bold transition">ALL</button>
+                            <button onclick="app.filterChampStats('TOP')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">TOP</button>
+                            <button onclick="app.filterChampStats('JUG')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">JUG</button>
+                            <button onclick="app.filterChampStats('MID')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">MID</button>
+                            <button onclick="app.filterChampStats('BOT')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">BOT</button>
+                            <button onclick="app.filterChampStats('SUP')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">SUP</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-900 border border-gray-700 rounded-lg flex-1 overflow-hidden flex flex-col">
+                        <!-- table-layout: fixed를 활용한 정확한 정렬 맞춤 -->
+                        <table class="w-full text-center border-collapse table-fixed">
+                            <thead>
+                                <tr class="bg-gray-800 text-gray-400 text-xs border-b border-gray-700 select-none">
+                                    <th class="p-2 font-medium text-left pl-6 w-[40%]">챔피언</th>
+                                    <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('pick')">픽률 <i id="sort-icon-pick" class="fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]"></i></th>
+                                    <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('ban')">밴률 <i id="sort-icon-ban" class="fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]"></i></th>
+                                    <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('bp')">밴픽률 <i id="sort-icon-bp" class="fa-solid fa-sort-down sort-icon text-lck-accent ml-1 text-[10px]"></i></th>
+                                    <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('win')">승률 <i id="sort-icon-win" class="fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]"></i></th>
+                                </tr>
+                            </thead>
+                        </table>
+                        <div class="overflow-y-auto flex-1">
+                            <table class="w-full text-center border-collapse table-fixed">
+                                <tbody id="champ-stats-list" class="text-sm text-gray-300">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
 
                 <!-- Tab: Draft (Match Preparation) -->
                 <section id="view-draft" class="view-section p-0 h-full bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-5 relative">
                     <div class="absolute inset-0 bg-black/90 z-0"></div>
                     
+                    <!-- BP Animation Overlay -->
+                    <div id="bp-anim-overlay" class="fixed inset-0 z-[100] flex items-center justify-center">
+                        <div id="bp-anim-card" class="relative w-48 h-48 sm:w-64 sm:h-64 shadow-2xl flex items-center justify-center border-4 border-transparent rounded-lg overflow-hidden bg-black">
+                            <img id="bp-anim-img" class="w-full h-full object-cover rounded-lg">
+                            <div id="bp-anim-slash" class="absolute bg-red-600 h-4 shadow-[0_0_20px_red] hidden" style="width: 150%; left: -25%; top: 48%; transform: rotate(-45deg);"></div>
+                        </div>
+                    </div>
+
                     <div class="z-10 flex flex-col h-full p-4 gap-4">
                         <!-- Scoreboard Header -->
-                        <div class="flex justify-between items-center bg-black/50 border border-gray-800 p-3 rounded">
+                        <div class="flex justify-between items-center bg-black/50 border border-gray-800 p-3 rounded shrink-0">
                             <div class="w-1/3 flex items-center gap-3">
                                 <div id="draft-blue-logo" class="shrink-0"></div>
                                 <div>
@@ -372,15 +471,15 @@
                         <!-- Draft Main Area -->
                         <div class="flex-1 flex gap-4 overflow-hidden">
                             <!-- Blue Side -->
-                            <div class="w-64 flex flex-col gap-2">
-                                <div class="bg-gray-900/80 border border-lck-blue/30 rounded p-2 grid grid-cols-3 gap-1 h-24 content-start" id="draft-blue-bans"></div>
-                                <div class="bg-gray-900/80 border border-lck-blue/30 rounded p-2 flex-1 flex flex-col gap-2" id="draft-blue-picks"></div>
+                            <div class="w-64 flex flex-col gap-2 h-full">
+                                <div class="bg-gray-900/80 border border-lck-blue/30 rounded p-2 grid grid-cols-3 gap-1 h-24 content-start shrink-0" id="draft-blue-bans"></div>
+                                <div class="bg-gray-900/80 border border-lck-blue/30 rounded p-2 flex-1 flex flex-col gap-2 overflow-y-auto" id="draft-blue-picks"></div>
                             </div>
 
                             <!-- Center: Pool & Tiers -->
                             <div class="flex-1 bg-lck-panel/80 border border-gray-800 rounded p-4 flex flex-col gap-3">
                                 <!-- Role Filter & Search -->
-                                <div class="flex justify-between items-center bg-gray-900 p-2 rounded gap-2">
+                                <div class="flex justify-between items-center bg-gray-900 p-2 rounded gap-2 shrink-0">
                                     <div class="flex gap-2 shrink-0" id="draft-role-filters">
                                         <button onclick="draft.filter('ALL'); sfx.play('click');" class="role-filter active text-white font-bold px-3 py-1.5 rounded bg-gray-700 text-sm">ALL</button>
                                         <button onclick="draft.filter('TOP'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">TOP</button>
@@ -401,7 +500,7 @@
                                 </div>
 
                                 <!-- Action Buttons -->
-                                <div class="h-auto flex flex-col justify-center items-center gap-2 border-t border-gray-700 pt-3 min-h-[60px]">
+                                <div class="h-auto flex flex-col justify-center items-center gap-2 border-t border-gray-700 pt-3 min-h-[60px] shrink-0">
                                     <div id="draft-role-select" class="hidden flex gap-2 mb-1">
                                         <button onclick="draft.selectRole('TOP'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">TOP</button>
                                         <button onclick="draft.selectRole('JUG'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">JUG</button>
@@ -418,14 +517,14 @@
                             </div>
 
                             <!-- Red Side -->
-                            <div class="w-64 flex flex-col gap-2">
-                                <div class="bg-gray-900/80 border border-lck-red/30 rounded p-2 grid grid-cols-3 gap-1 h-24 content-start justify-items-end" id="draft-red-bans"></div>
-                                <div class="bg-gray-900/80 border border-lck-red/30 rounded p-2 flex-1 flex flex-col gap-2" id="draft-red-picks"></div>
+                            <div class="w-64 flex flex-col gap-2 h-full">
+                                <div class="bg-gray-900/80 border border-lck-red/30 rounded p-2 grid grid-cols-3 gap-1 h-24 content-start justify-items-end shrink-0" id="draft-red-bans"></div>
+                                <div class="bg-gray-900/80 border border-lck-red/30 rounded p-2 flex-1 flex flex-col gap-2 overflow-y-auto" id="draft-red-picks"></div>
                             </div>
                         </div>
 
                         <!-- Player Feedback Chat -->
-                        <div class="h-24 bg-lck-panel/90 border border-gray-700 rounded-lg p-3 flex gap-4 items-center">
+                        <div class="h-24 bg-lck-panel/90 border border-gray-700 rounded-lg p-3 flex gap-4 items-center shrink-0">
                             <div id="draft-chat-avatar" class="w-16 h-16 rounded-full bg-gray-800 border-2 border-gray-500 flex items-center justify-center overflow-hidden shrink-0">
                                 <i class="fa-solid fa-users text-3xl text-gray-400"></i>
                             </div>
@@ -444,6 +543,8 @@
                     <div class="absolute top-0 w-full h-16 flex justify-center z-30 font-bold text-white shadow-lg border-b border-gray-800 bg-black/80">
                         <!-- Blue Side -->
                         <div class="flex-1 flex items-center justify-end px-6 gap-6">
+                            <!-- Series Score Pips -->
+                            <div class="flex gap-1" id="score-pips-blue"></div>
                             <div class="flex items-center gap-4 text-sm text-gray-300 font-mono tracking-wider">
                                 <span id="match-blue-towers"><i class="fa-solid fa-chess-rook text-gray-400 mr-1"></i>0</span>
                                 <span id="match-blue-gold" class="text-yellow-200"><i class="fa-solid fa-coins mr-1 text-gray-400"></i>0.0k</span>
@@ -471,10 +572,12 @@
                                 <span id="match-red-gold" class="text-yellow-200">0.0k<i class="fa-solid fa-coins ml-1 text-gray-400"></i></span>
                                 <span id="match-red-towers">0<i class="fa-solid fa-chess-rook text-gray-400 ml-1"></i></span>
                             </div>
+                            <!-- Series Score Pips -->
+                            <div class="flex gap-1" id="score-pips-red"></div>
                         </div>
                     </div>
                     
-                    <!-- Dragons & Grubs (Separated from Scoreboard) -->
+                    <!-- Dragons & Grubs -->
                     <div class="absolute top-16 w-full flex justify-center z-20 pointer-events-none mt-2">
                         <div class="flex items-center justify-center gap-4 text-xs bg-black/60 px-4 py-1 rounded-full border border-gray-700 backdrop-blur-sm">
                             <div class="flex gap-1" id="match-blue-dragons"></div>
@@ -487,6 +590,14 @@
                         </div>
                     </div>
 
+                    <!-- Ingame Side Panels -->
+                    <div class="absolute left-0 top-16 bottom-0 w-72 bg-gradient-to-r from-black/95 to-transparent flex flex-col justify-center gap-1.5 pl-4 z-10 pointer-events-none" id="match-panel-blue">
+                        <!-- Injected -->
+                    </div>
+                    <div class="absolute right-0 top-16 bottom-0 w-72 bg-gradient-to-l from-black/95 to-transparent flex flex-col justify-center gap-1.5 pr-4 z-10 pointer-events-none items-end text-right" id="match-panel-red">
+                        <!-- Injected -->
+                    </div>
+
                     <!-- Main Viewer Area -->
                     <div class="flex-1 w-full h-full relative overflow-hidden bg-[url('https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png')] bg-cover bg-center bg-no-repeat flex items-center justify-center">
                         <div class="absolute inset-0 bg-black/70 z-0 backdrop-blur-sm"></div>
@@ -494,73 +605,92 @@
                         <!-- Real-time Event Announcer -->
                         <div id="announcer-container"></div>
                         
-                        <!-- Left Side Kill Log -->
-                        <div id="kill-log-left" class="kill-log-container"></div>
-                        <!-- Right Side Kill Log -->
-                        <div id="kill-log-right" class="kill-log-container"></div>
+                        <!-- Separated Kill Log Containers -->
+                        <div id="kill-log-left" class="kill-log-wrapper"></div>
+                        <div id="kill-log-right" class="kill-log-wrapper"></div>
                         
                         <!-- Minimap Container (Center) -->
-                        <div class="z-10 relative flex flex-col items-center">
-                            <div id="minimap-container" class="w-[400px] h-[400px] rounded-lg shadow-[0_0_30px_rgba(0,0,0,0.8)] border-2 border-gray-700 relative bg-[url('https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png')] bg-cover bg-center">
-                                <div class="absolute inset-0 bg-black/20 rounded-lg"></div>
+                        <div class="z-10 relative flex flex-col items-center mt-[-4rem]">
+                            <div id="minimap-container" class="w-[400px] h-[400px] rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.9)] border-4 border-gray-800 relative bg-[url('https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png')] bg-cover bg-center">
+                                <div class="absolute inset-0 bg-black/10 rounded-lg"></div>
+                                <!-- Towers injected via JS -->
                             </div>
                             <!-- Speed Controls -->
-                            <div class="flex gap-2 mt-4 bg-black/80 px-4 py-2 rounded-full border border-gray-700 pointer-events-auto">
-                                <button class="spd-btn px-3 py-1 bg-gray-800 rounded-full text-gray-400 hover:text-white transition font-bold" onclick="match.setSpeed(1); sfx.play('click');">1x</button>
-                                <button class="spd-btn active px-3 py-1 bg-gray-700 border border-lck-accent rounded-full text-lck-accent transition font-bold" onclick="match.setSpeed(2); sfx.play('click');">2x</button>
-                                <button class="spd-btn px-3 py-1 bg-gray-800 rounded-full text-gray-400 hover:text-white transition font-bold" onclick="match.setSpeed(3); sfx.play('click');">3x</button>
+                            <div class="flex gap-2 mt-6 bg-black/90 px-5 py-2.5 rounded-full border border-gray-600 pointer-events-auto shadow-lg">
+                                <button class="spd-btn px-4 py-1 bg-gray-800 rounded-full text-gray-400 hover:text-white transition font-bold text-sm" onclick="match.setSpeed(1); sfx.play('click');">1x</button>
+                                <button class="spd-btn active px-4 py-1 bg-gray-200 border-none rounded-full text-black transition font-bold text-sm shadow-[0_0_8px_rgba(255,255,255,0.5)]" onclick="match.setSpeed(2); sfx.play('click');">2x</button>
+                                <button class="spd-btn px-4 py-1 bg-gray-800 rounded-full text-gray-400 hover:text-white transition font-bold text-sm" onclick="match.setSpeed(3); sfx.play('click');">3x</button>
                             </div>
                         </div>
 
                         <!-- Bottom Text Log -->
-                        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[700px] h-48 bg-black/90 border border-gray-800 rounded-lg flex flex-col z-20 shadow-xl">
-                            <div class="p-2 border-b border-gray-800 text-xs text-gray-400 flex justify-between items-center shrink-0 bg-gray-900/50 rounded-t-lg">
-                                <span>실시간 인게임 로그 (세트 <span id="log-set-num">1</span>)</span>
-                                <span class="text-red-500 animate-pulse font-bold tracking-widest"><i class="fa-solid fa-circle text-[8px] align-middle mr-1"></i>LIVE</span>
+                        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[600px] h-32 bg-black/90 border border-gray-700 rounded-lg flex flex-col z-20 shadow-xl pointer-events-none">
+                            <div class="p-1.5 border-b border-gray-700 text-xs text-gray-400 flex justify-between items-center shrink-0 bg-gray-900/80 rounded-t-lg">
+                                <span class="ml-2">실시간 인게임 로그 (세트 <span id="log-set-num">1</span>)</span>
+                                <span class="text-red-500 animate-pulse font-bold tracking-widest mr-2"><i class="fa-solid fa-circle text-[8px] align-middle mr-1"></i>LIVE</span>
                             </div>
-                            <div class="flex-1 p-3 overflow-y-auto flex flex-col gap-1.5 font-mono text-sm" id="match-log">
+                            <div class="flex-1 p-2 overflow-y-auto flex flex-col gap-1 font-mono text-xs pointer-events-auto" id="match-log">
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- Match Result Modal (Overlay inside main) -->
-                <div id="view-result" class="hidden absolute inset-0 bg-black/95 z-50 flex items-center justify-center">
-                    <div class="bg-lck-panel border-2 border-lck-accent p-8 rounded-xl w-[600px] text-center max-h-[90vh] overflow-y-auto shadow-[0_0_50px_rgba(200,155,60,0.2)]">
-                        <div id="res-subtitle" class="text-lck-accent font-bold tracking-widest mb-1">SET 1 RESULT</div>
-                        <h2 class="text-5xl font-black mb-2 tracking-widest" id="res-title">VICTORY</h2>
+                <!-- Match Result Modal -->
+                <div id="view-result" class="hidden absolute inset-0 bg-black/95 z-50 flex items-center justify-center backdrop-blur-sm">
+                    <div class="bg-lck-panel border border-gray-700 p-8 rounded-xl w-[800px] max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col items-center">
+                        <div id="res-subtitle" class="text-gray-400 font-bold tracking-widest mb-1 text-sm">SET 1 RESULT</div>
+                        <h2 class="text-6xl font-black mb-6 tracking-widest" id="res-title">VICTORY</h2>
                         
-                        <div class="flex justify-between items-center bg-gray-900 p-6 rounded-lg mb-6 mt-4">
+                        <div class="flex justify-between items-center w-full bg-gray-900 p-4 rounded-lg mb-6 border border-gray-800">
                             <div class="text-center w-1/3">
                                 <div id="res-blue-name" class="text-sm text-gray-400 mb-1">TEAM BLUE</div>
-                                <div id="res-blue-score" class="text-4xl font-bold text-lck-blue">0</div>
+                                <div id="res-blue-score" class="text-5xl font-bold text-lck-blue">0</div>
                             </div>
-                            <div class="w-1/3 text-center">
+                            <div class="w-1/3 text-center flex flex-col items-center">
                                 <div class="text-xs text-gray-500 mb-1">SERIES SCORE</div>
-                                <div id="res-series-score" class="text-2xl font-bold text-white tracking-widest">0 : 0</div>
-                                <div class="text-[10px] text-gray-600 mt-2">TIME: <span id="res-time">00:00</span></div>
+                                <div id="res-series-score" class="text-3xl font-bold text-white tracking-widest mb-1">0 : 0</div>
+                                <div class="text-[11px] text-gray-600 bg-gray-800 px-3 py-1 rounded-full border border-gray-700">TIME: <span id="res-time">00:00</span></div>
                             </div>
                             <div class="text-center w-1/3">
                                 <div id="res-red-name" class="text-sm text-gray-400 mb-1">TEAM RED</div>
-                                <div id="res-red-score" class="text-4xl font-bold text-lck-red">0</div>
+                                <div id="res-red-score" class="text-5xl font-bold text-lck-red">0</div>
                             </div>
+                        </div>
+
+                        <!-- Detailed Stats Table -->
+                        <div class="w-full mb-6">
+                            <table class="w-full text-center text-xs text-gray-300 border-collapse">
+                                <thead>
+                                    <tr class="border-b border-gray-700 text-gray-500 bg-gray-900/50">
+                                        <th class="p-2 text-left pl-4">BLUE</th>
+                                        <th class="p-2">K/D/A</th>
+                                        <th class="p-2 border-r border-gray-700">DMG</th>
+                                        <th class="p-2 text-right pr-4">RED</th>
+                                        <th class="p-2">K/D/A</th>
+                                        <th class="p-2">DMG</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="res-stats-body">
+                                    <!-- Injected -->
+                                </tbody>
+                            </table>
                         </div>
 
                         <!-- Feedback Section for Next Set -->
-                        <div id="res-feedback-section" class="border-t border-gray-700 pt-6 mb-6">
-                            <h3 class="text-white font-bold mb-4">다음 세트 감독 전술 지시</h3>
+                        <div id="res-feedback-section" class="w-full border-t border-gray-700 pt-6 mb-6">
+                            <h3 class="text-white text-sm font-bold mb-3 text-center">다음 세트 감독 전술 지시</h3>
                             <div class="flex justify-center gap-3">
-                                <button onclick="match.setTactic('balance'); sfx.play('click');" class="tactic-btn active bg-gray-700 border border-lck-accent text-white px-6 py-2 rounded text-sm font-bold transition">기본 (밸런스)</button>
-                                <button onclick="match.setTactic('aggro'); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">공격적 (교전)</button>
-                                <button onclick="match.setTactic('safe'); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">수비적 (성장)</button>
-                                <button onclick="match.setTactic('obj'); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">오브젝트 집중</button>
+                                <button onclick="match.setTactic('balance', this); sfx.play('click');" class="tactic-btn active bg-gray-700 border border-lck-accent text-white px-6 py-2 rounded text-sm font-bold transition">기본 (밸런스)</button>
+                                <button onclick="match.setTactic('aggro', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">공격적 (교전)</button>
+                                <button onclick="match.setTactic('safe', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">수비적 (성장)</button>
+                                <button onclick="match.setTactic('obj', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">오브젝트 집중</button>
                             </div>
                         </div>
 
-                        <button id="btn-res-next-set" onclick="match.startNextSet(); sfx.play('click');" class="bg-lck-blue text-white font-bold py-3 px-12 rounded-full w-full hover:bg-blue-500 mb-3 shadow-[0_0_15px_#0bc6e3]">
-                            다음 세트 밴픽 진행
+                        <button id="btn-res-next-set" onclick="match.startNextSet(); sfx.play('click');" class="bg-lck-blue text-white font-bold py-3 px-12 rounded w-full hover:bg-blue-500 mb-2 shadow-[0_0_15px_rgba(11,198,227,0.4)] transition">
+                            다음 세트 진입
                         </button>
-                        <button id="btn-res-end-match" onclick="app.endMatch(); sfx.play('click');" class="hidden bg-lck-accent text-black font-bold py-3 px-12 rounded-full w-full hover:bg-yellow-500 shadow-[0_0_15px_#c89b3c]">
+                        <button id="btn-res-end-match" onclick="app.endMatch(); sfx.play('click');" class="hidden bg-lck-accent text-black font-bold py-3 px-12 rounded w-full hover:bg-yellow-500 shadow-[0_0_15px_rgba(200,155,60,0.4)] transition">
                             매치 종료 및 대시보드 복귀
                         </button>
                     </div>
@@ -569,14 +699,84 @@
         </div>
     </div>
 
-    <!-- 분리된 data.js 로드 -->
-    <script src="./data.js"></script>
-
+    <!-- 스크립트 로딩: 전역 방식으로 단순화 및 안정성 확보 -->
     <script>
+        const initDataAndApp = () => {
+            if (typeof window.DATA === 'undefined' || !window.DATA) {
+                if (typeof DATA !== 'undefined') {
+                    window.DATA = DATA;
+                } else {
+                    console.warn("⚠️ data.js 파일을 찾을 수 없거나 문법 오류(Syntax Error)가 있습니다. 기본 데이터를 로드합니다.");
+                    window.DATA = {
+                        roles: ['TOP', 'JUG', 'MID', 'BOT', 'SUP'],
+                        conditions: [
+                            { id: 'perfect', label: '최상', starsMod: 1, color: 'text-blue-400' },
+                            { id: 'good', label: '좋음', starsMod: 0, color: 'text-green-400' },
+                            { id: 'normal', label: '보통', starsMod: 0, color: 'text-gray-400' },
+                            { id: 'bad', label: '나쁨', starsMod: -1, color: 'text-orange-400' },
+                            { id: 'injured', label: '부상', starsMod: -2, color: 'text-red-600' }
+                        ],
+                        teams: [
+                            { id: 'HLE', name: 'Hanwha Life Esports', color: '#f37321', logo: '' },
+                            { id: 'T1', name: 'T1', color: '#e2012d', logo: '' },
+                            { id: 'GEN', name: 'GEN.G', color: '#cfb887', logo: '' },
+                            { id: 'KT', name: 'KT Rolster', color: '#ff0a07', logo: '' },
+                            { id: 'DK', name: 'Dplus KIA', color: '#000000', logo: '' }
+                        ],
+                        players: [],
+                        champions: [
+                            { id: 'Aatrox', name: '아트록스', role: 'TOP', tier: 1 },
+                            { id: 'LeeSin', name: '리 신', role: 'JUG', tier: 1 },
+                            { id: 'Ahri', name: '아리', role: 'MID', tier: 1 },
+                            { id: 'Zeri', name: '제리', role: 'BOT', tier: 1 },
+                            { id: 'Nautilus', name: '노틸러스', role: 'SUP', tier: 1 }
+                        ]
+                    };
+                    
+                    window.DATA.teams.forEach(t => {
+                        window.DATA.roles.forEach(r => {
+                            window.DATA.players.push({ id: `${t.id}_${r}`, name: `${t.id} ${r}`, teamId: t.id, role: r, tier: Math.floor(Math.random() * 3) + 3, cond: 'normal' });
+                            window.DATA.players.push({ id: `${t.id}_${r}_SUB`, name: `${t.id} ${r} Sub`, teamId: t.id, role: r, tier: Math.floor(Math.random() * 2) + 1, cond: 'normal' });
+                        });
+                    });
+                }
+            }
+
+            window.DATA.roles = window.DATA.roles || ['TOP', 'JUG', 'MID', 'BOT', 'SUP'];
+            window.DATA.teams = window.DATA.teams || [];
+            window.DATA.players = window.DATA.players || [];
+            window.DATA.champions = window.DATA.champions || [];
+            window.DATA.conditions = window.DATA.conditions || [
+                { id: 'perfect', label: '최상', starsMod: 1, color: 'text-blue-400' },
+                { id: 'good', label: '좋음', starsMod: 0, color: 'text-green-400' },
+                { id: 'normal', label: '보통', starsMod: 0, color: 'text-gray-400' },
+                { id: 'bad', label: '나쁨', starsMod: -1, color: 'text-orange-400' },
+                { id: 'injured', label: '부상', starsMod: -2, color: 'text-red-600' }
+            ];
+
+            window.DATA.players.forEach(p => {
+                if (p.team && !p.teamId) p.teamId = p.team; 
+                if (!p.cond) p.cond = 'normal';
+            });
+
+            app.preloadAndInit();
+        };
+
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.innerHTML = `
+            try {
+                const mod = await import('./data.js');
+                window.DATA = mod.default || mod.DATA || mod;
+            } catch (error) { }
+            initDataAndApp();
+        `;
+        document.body.appendChild(script);
+
         // ==========================================
         // SFX Module (Tone.js)
         // ==========================================
-        const sfx = {
+        window.sfx = {
             enabled: false,
             synth: null,
             noise: null,
@@ -614,46 +814,9 @@
         };
 
         // ==========================================
-        // DATA FALLBACK
-        // ==========================================
-        if (typeof DATA === 'undefined') {
-            console.warn("⚠️ data.js 파일을 찾을 수 없거나 오류가 있습니다. 기본 데이터를 사용하여 실행합니다.");
-            window.DATA = {
-                roles: ['TOP', 'JUG', 'MID', 'BOT', 'SUP'],
-                conditions: [
-                    { id: 'perfect', label: '최상', starsMod: 1, color: 'text-blue-400' },
-                    { id: 'good', label: '좋음', starsMod: 0, color: 'text-green-400' },
-                    { id: 'normal', label: '보통', starsMod: 0, color: 'text-gray-400' },
-                    { id: 'bad', label: '나쁨', starsMod: -1, color: 'text-orange-400' },
-                    { id: 'injured', label: '부상', starsMod: -2, color: 'text-red-600' }
-                ],
-                teams: [
-                    { id: 'HLE', name: 'Hanwha Life Esports', color: '#f37321', logo: '' },
-                    { id: 'T1', name: 'T1', color: '#e2012d', logo: '' },
-                    { id: 'GEN', name: 'GEN.G', color: '#cfb887', logo: '' }
-                ],
-                players: [],
-                champions: [
-                    { id: 'Aatrox', name: '아트록스', role: 'TOP', tier: 1 },
-                    { id: 'LeeSin', name: '리 신', role: 'JUG', tier: 1 },
-                    { id: 'Ahri', name: '아리', role: 'MID', tier: 1 },
-                    { id: 'Zeri', name: '제리', role: 'BOT', tier: 1 },
-                    { id: 'Nautilus', name: '노틸러스', role: 'SUP', tier: 1 }
-                ]
-            };
-            
-            window.DATA.teams.forEach(t => {
-                window.DATA.roles.forEach(r => {
-                    window.DATA.players.push({ id: `${t.id}_${r}`, name: `${t.id} ${r}`, teamId: t.id, role: r, tier: Math.floor(Math.random() * 3) + 3, cond: 'normal' });
-                    window.DATA.players.push({ id: `${t.id}_${r}_SUB`, name: `${t.id} ${r} Sub`, teamId: t.id, role: r, tier: Math.floor(Math.random() * 2) + 1, cond: 'normal' });
-                });
-            });
-        }
-
-        // ==========================================
         // STATE
         // ==========================================
-        let state = {
+        window.state = {
             playerTeamId: null,
             date: new Date('2026-01-14'), 
             calMonth: new Date('2026-01-14'),
@@ -662,20 +825,26 @@
             standings: {}, 
             roster: { starters: {}, subs: [] },
             leaguePhase: 'REGULAR_1_2',
-            groups: { legend: [], rise: [] },
-            activeSeries: null
+            groups: null,
+            activeSeries: null,
+            champStats: {}, 
+            playerConditions: {},
+            champStatFilter: 'ALL',
+            champStatSort: { key: 'bp', order: 'desc' }
         };
 
         // ==========================================
         // UTILS
         // ==========================================
-        const utils = {
+        window.utils = {
             getChampImg: (id) => {
                 const c = utils.getChamp(id);
                 return (c && c.img) ? c.img : `https://ddragon.leagueoflegends.com/cdn/14.5.1/img/champion/${id}.png`;
             },
             getStarHtml: (p) => {
-                const cond = typeof DATA !== 'undefined' ? DATA.conditions.find(c=>c.id===p.cond) : null;
+                const pc = state.playerConditions[p.id];
+                const condId = pc ? pc.cond : (p.cond || 'normal');
+                const cond = window.DATA.conditions.find(c=>c.id===condId) || window.DATA.conditions[2];
                 const starsMod = cond ? cond.starsMod : 0;
                 const currentStars = Math.max(1, Math.min(p.tier, p.tier + starsMod));
                 
@@ -691,12 +860,12 @@
                 const days = ['일','월','화','수','목','금','토'];
                 return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} (${days[d.getDay()]})`;
             },
-            getTeam: (id) => typeof DATA !== 'undefined' ? DATA.teams.find(t=>t.id===id) : null,
+            getTeam: (id) => typeof window.DATA !== 'undefined' ? window.DATA.teams.find(t=>t.id===id) : null,
             getPlayer: (id, fallbackRole) => {
-                const p = DATA.players.find(p=>p.id===id);
-                return p || { name: 'Player', role: fallbackRole, img: '' };
+                const p = window.DATA.players.find(p=>p.id===id);
+                return p || { name: 'Player', role: fallbackRole, img: '', tier: 1 };
             },
-            getChamp: (id) => typeof DATA !== 'undefined' ? DATA.champions.find(c=>c.id===id) : null,
+            getChamp: (id) => typeof window.DATA !== 'undefined' ? window.DATA.champions.find(c=>c.id===id) : null,
             getLogoHtml: (teamId, extraClass='', idStr='') => {
                 const t = utils.getTeam(teamId);
                 if(!t) return `<div class="${extraClass} bg-gray-600 rounded flex items-center justify-center font-bold text-white">?</div>`;
@@ -704,7 +873,7 @@
                 
                 if(t.logo) {
                     const imgClasses = extraClass.split(' ').filter(c => !c.startsWith('border') && !c.startsWith('bg-') && !c.startsWith('shadow') && !c.startsWith('rounded')).join(' ');
-                    return `<img ${idAttr} src="${t.logo}" class="${imgClasses} object-contain shrink-0 drop-shadow-md" alt="${t.name}" onerror="this.outerHTML='<div class=\\'${extraClass} rounded flex items-center justify-center font-bold text-white shadow-inner shrink-0\\' style=\\'background-color: ${t.color}\\'>${t.name.substring(0,1)}</div>'">`;
+                    return `<img ${idAttr} src="${t.logo}" class="${imgClasses} object-contain shrink-0 drop-shadow-md" alt="${t.name}" onerror="this.outerHTML='<div class=&quot;${extraClass} rounded flex items-center justify-center font-bold text-white shadow-inner shrink-0&quot; style=&quot;background-color: ${t.color}&quot;>${t.name.substring(0,1)}</div>'">`;
                 }
                 return `<div ${idAttr} class="${extraClass} rounded flex items-center justify-center font-bold text-white shadow-inner shrink-0" style="background-color: ${t.color}">${t.name.substring(0,1)}</div>`;
             }
@@ -713,7 +882,7 @@
         // ==========================================
         // MAIN APP CONTROLLER
         // ==========================================
-        const app = {
+        window.app = {
             toastTimeout: null,
             
             preloadAndInit() {
@@ -721,10 +890,10 @@
                 let loaded = 0;
                 const imagesToLoad = [];
                 
-                if(typeof DATA !== 'undefined') {
-                    DATA.champions.forEach(c => imagesToLoad.push((c && c.img) ? c.img : `https://ddragon.leagueoflegends.com/cdn/14.5.1/img/champion/${c.id}.png`));
-                    DATA.players.forEach(p => { if(p.img) imagesToLoad.push(p.img); });
-                    DATA.teams.forEach(t => { if(t.logo) imagesToLoad.push(t.logo); });
+                if(typeof window.DATA !== 'undefined') {
+                    window.DATA.champions.forEach(c => imagesToLoad.push((c && c.img) ? c.img : `https://ddragon.leagueoflegends.com/cdn/14.5.1/img/champion/${c.id}.png`));
+                    window.DATA.players.forEach(p => { if(p.img) imagesToLoad.push(p.img); });
+                    window.DATA.teams.forEach(t => { if(t.logo) imagesToLoad.push(t.logo); });
                 }
                 
                 const total = imagesToLoad.length;
@@ -759,25 +928,30 @@
 
             init() {
                 if(localStorage.getItem('lck_manager_save')) {
-                    document.getElementById('btn-continue').disabled = false;
+                    const btn = document.getElementById('btn-continue');
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
                 }
                 this.showScreen('title');
+                
+                if(!state.champStats || Object.keys(state.champStats).length === 0) {
+                    state.champStats = {};
+                    window.DATA.champions.forEach(c => {
+                        state.champStats[c.id] = { picks: 0, bans: 0, wins: 0, totalGames: 0 };
+                    });
+                }
             },
 
             toast(msg, type='error') {
                 const el = document.getElementById('ui-toast');
                 el.innerText = msg;
-                el.className = `fixed top-0 left-1/2 -translate-x-1/2 z-[200] mt-6 px-6 py-3 rounded-lg shadow-xl font-bold text-white text-center transition-transform duration-300 toast-hidden ${type==='error'?'bg-red-600':'bg-lck-blue'}`;
-                
-                void el.offsetWidth; 
-                el.classList.remove('toast-hidden');
-                el.classList.add('toast-visible');
+                el.className = `fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-lg shadow-xl font-bold text-white text-center transition-all duration-300 toast-visible ${type==='error'?'bg-red-600':'bg-lck-blue'}`;
                 
                 if(this.toastTimeout) clearTimeout(this.toastTimeout);
                 this.toastTimeout = setTimeout(() => {
                     el.classList.remove('toast-visible');
                     el.classList.add('toast-hidden');
-                }, 2500);
+                }, 2000);
             },
             
             showScreen(id) {
@@ -801,6 +975,16 @@
                 });
                 document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
                 document.getElementById(`view-${tabId}`).classList.add('active');
+
+                // 좌측 메뉴 사이드바 숨김 처리 (밴픽 및 게임화면 진입 시 확장된 화면 제공)
+                const sidebar = document.getElementById('main-sidebar');
+                if (sidebar) {
+                    if (tabId === 'draft' || tabId === 'match') {
+                        sidebar.style.display = 'none';
+                    } else {
+                        sidebar.style.display = 'flex';
+                    }
+                }
             },
 
             startNewGameSetup() {
@@ -809,7 +993,7 @@
                 const grid = document.getElementById('team-grid');
                 grid.innerHTML = '';
                 
-                DATA.teams.forEach(t => {
+                window.DATA.teams.forEach(t => {
                     const el = document.createElement('div');
                     el.className = 'bg-gray-900 border border-gray-700 rounded-lg p-6 flex flex-col items-center cursor-pointer hover:border-lck-accent transition';
                     el.onclick = () => {
@@ -829,14 +1013,17 @@
 
             startNewGame() {
                 sfx.play('click');
-                this.generateSchedule1R2R();
                 
-                DATA.teams.forEach(t => state.standings[t.id] = { w:0, l:0, pts:0 });
-                const myPlayers = DATA.players.filter(p => p.teamId === state.playerTeamId);
-                myPlayers.forEach(p => p.cond = 'normal');
+                state.standings = {};
+                window.DATA.teams.forEach(t => state.standings[t.id] = { w:0, l:0, pts:0 });
+                state.playerConditions = {};
+                state.groups = null;
                 
-                DATA.roles.forEach(r => {
-                    const rolePlayers = myPlayers.filter(p=>p.role===r).sort((a,b)=>b.tier - a.tier);
+                const myPlayers = window.DATA.players.filter(p => p.teamId === state.playerTeamId);
+                state.roster = { starters: {}, subs: [] };
+                
+                window.DATA.roles.forEach(r => {
+                    const rolePlayers = myPlayers.filter(p=>p.role.includes(r)).sort((a,b)=>b.tier - a.tier);
                     if(rolePlayers.length > 0) {
                         state.roster.starters[r] = rolePlayers[0].id;
                         if(rolePlayers.length > 1) {
@@ -845,20 +1032,25 @@
                     }
                 });
                 
-                state.date = new Date('2026-01-14');
-                state.calMonth = new Date('2026-01-14');
+                state.date = new Date('2026-04-01'); 
+                state.calMonth = new Date('2026-04-01');
                 state.leaguePhase = 'REGULAR_1_2';
+                state.news = [];
+                state.champStats = {};
+                window.DATA.champions.forEach(c => state.champStats[c.id] = { picks: 0, bans: 0, wins: 0, totalGames: 0 });
+                state.champStatFilter = 'ALL';
+                state.champStatSort = { key: 'bp', order: 'desc' };
+
+                this.generateSchedule1R2R();
                 
-                this.addNews("새로운 시즌이 개막했습니다! 정규 1, 2 라운드 일정이 시작됩니다.", "sys");
+                this.addNews("새로운 시즌이 개막했습니다! 정규 1, 2라운드 일정이 시작됩니다.", "sys");
                 this.updateUI();
                 this.showScreen('workspace');
             },
 
-            generateSchedule1R2R() {
-                state.schedule = [];
-                let teams = DATA.teams.map(t=>t.id);
+            generateRoundRobin(teamsArr) {
+                let teams = [...teamsArr];
                 let rounds = [];
-                
                 for (let i = 0; i < teams.length - 1; i++) {
                     let round = [];
                     for (let j = 0; j < teams.length / 2; j++) {
@@ -867,19 +1059,26 @@
                     rounds.push(round);
                     teams.splice(1, 0, teams.pop());
                 }
+                return rounds;
+            },
+
+            generateSchedule1R2R() {
+                state.schedule = [];
+                let teams = window.DATA.teams.map(t=>t.id);
+                let rounds = this.generateRoundRobin(teams);
                 
                 let fullMatches = [];
                 rounds.forEach(r => fullMatches.push(...r)); 
                 rounds.forEach(r => { r.forEach(m => fullMatches.push([m[1], m[0]])); });
                 
-                let curDate = new Date('2026-01-14'); 
+                let curDate = new Date(state.date); 
                 let matchIdx = 0;
                 while(matchIdx < fullMatches.length) {
                     let day = curDate.getDay();
                     if(day >= 3 || day === 0) { 
-                        state.schedule.push({ id: `m_${matchIdx}`, date: new Date(curDate), t1: fullMatches[matchIdx][0], t2: fullMatches[matchIdx][1], played: false });
+                        state.schedule.push({ id: `m_r12_${matchIdx}`, date: new Date(curDate), t1: fullMatches[matchIdx][0], t2: fullMatches[matchIdx][1], played: false, desc: matchIdx < 45 ? '1라운드' : '2라운드', bo: 3, results: [] });
                         if(matchIdx + 1 < fullMatches.length) {
-                            state.schedule.push({ id: `m_${matchIdx+1}`, date: new Date(curDate), t1: fullMatches[matchIdx+1][0], t2: fullMatches[matchIdx+1][1], played: false });
+                            state.schedule.push({ id: `m_r12_${matchIdx+1}`, date: new Date(curDate), t1: fullMatches[matchIdx+1][0], t2: fullMatches[matchIdx+1][1], played: false, desc: matchIdx < 45 ? '1라운드' : '2라운드', bo: 3, results: [] });
                         }
                         matchIdx += 2;
                     }
@@ -887,27 +1086,98 @@
                 }
             },
 
-            // ... (Phase scheduling logic kept standard for brevity, assuming standard transitions)
             generatePhaseSchedule() {
                 let curDate = new Date(state.date);
                 curDate.setDate(curDate.getDate() + 3); 
                 
-                const standings = DATA.teams.map(t => ({ id: t.id, w: state.standings[t.id].w, pts: state.standings[t.id].pts }))
+                const standings = window.DATA.teams.map(t => ({ id: t.id, w: state.standings[t.id].w, pts: state.standings[t.id].pts }))
                                            .sort((a,b) => b.w - a.w || b.pts - a.pts);
 
                 if (state.leaguePhase === 'REGULAR_1_2') {
                     state.leaguePhase = 'MSI_QUAL';
-                    this.addNews("정규시즌 1, 2라운드가 종료되었습니다! 상위 6팀의 ROAD TO MSI 예선이 시작됩니다.", "sys");
+                    this.addNews("정규시즌 1, 2라운드가 종료되었습니다! 상위 6팀의 Road to MSI 예선이 시작됩니다.", "sys");
+                    
                     const top6 = standings.slice(0, 6).map(t=>t.id);
-                    state.schedule.push({ id: 'msi_1', date: new Date(curDate), t1: top6[4], t2: top6[5], played: false, desc: 'MSI 1R' });
+                    
+                    state.schedule.push({ id: `msi_1`, date: new Date(curDate), t1: top6[4], t2: top6[5], played: false, desc: 'MSI 1R (5위vs6위)', bo: 5, results: [] });
                     curDate.setDate(curDate.getDate() + 1);
-                    state.schedule.push({ id: 'msi_2', date: new Date(curDate), t1: top6[3], t2: 'TBD', played: false, desc: 'MSI 2R' }); 
+                    state.schedule.push({ id: `msi_2`, date: new Date(curDate), t1: top6[3], t2: 'TBD', played: false, desc: 'MSI 2R', bo: 5, results: [] }); 
+                    curDate.setDate(curDate.getDate() + 5); 
+                    state.schedule.push({ id: `msi_3`, date: new Date(curDate), t1: top6[0], t2: top6[1], played: false, desc: 'MSI 3R (1시드 결정전)', bo: 5, results: [] }); 
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `msi_4`, date: new Date(curDate), t1: top6[2], t2: 'TBD', played: false, desc: 'MSI 4R', bo: 5, results: [] }); 
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `msi_5`, date: new Date(curDate), t1: 'TBD', t2: 'TBD', played: false, desc: 'MSI 최종전 (2시드 결정전)', bo: 5, results: [] }); 
+
                 } else if (state.leaguePhase === 'MSI_QUAL') {
                     state.leaguePhase = 'REGULAR_3_4';
-                    state.groups.legend = standings.slice(0, 5).map(t=>t.id);
-                    state.groups.rise = standings.slice(5, 10).map(t=>t.id);
-                    this.addNews("ROAD TO MSI 종료. 3~4라운드 레전드 그룹과 라이즈 그룹 일정이 시작됩니다.", "sys");
-                    // ... abbreviated schedule gen ...
+                    this.addNews("Road to MSI 예선이 종료되었습니다! R3-4 레전드/라이즈 그룹 스플릿이 시작됩니다.", "sys");
+                    
+                    state.groups = { legend: standings.slice(0, 5).map(t=>t.id), rise: standings.slice(5, 10).map(t=>t.id) };
+                    
+                    let legRounds = this.generateRoundRobin(state.groups.legend);
+                    let riseRounds = this.generateRoundRobin(state.groups.rise);
+                    
+                    let legMatches = []; let riseMatches = [];
+                    legRounds.forEach(r => legMatches.push(...r)); 
+                    legRounds.forEach(r => { r.forEach(m => legMatches.push([m[1], m[0]])); }); 
+                    riseRounds.forEach(r => riseMatches.push(...r)); 
+                    riseRounds.forEach(r => { r.forEach(m => riseMatches.push([m[1], m[0]])); });
+                    
+                    let matchIdx = 0;
+                    while(matchIdx < legMatches.length) {
+                        let day = curDate.getDay();
+                        if(day >= 3 || day === 0) { 
+                            state.schedule.push({ id: `m_leg_${matchIdx}`, date: new Date(curDate), t1: legMatches[matchIdx][0], t2: legMatches[matchIdx][1], played: false, desc: matchIdx < 10 ? '3R (레전드)' : '4R (레전드)', bo: 3, results: [] });
+                            state.schedule.push({ id: `m_rise_${matchIdx}`, date: new Date(curDate), t1: riseMatches[matchIdx][0], t2: riseMatches[matchIdx][1], played: false, desc: matchIdx < 10 ? '3R (라이즈)' : '4R (라이즈)', bo: 3, results: [] });
+                            matchIdx++;
+                        }
+                        curDate.setDate(curDate.getDate() + 1);
+                    }
+                } else if (state.leaguePhase === 'REGULAR_3_4') {
+                    state.leaguePhase = 'PLAY_IN';
+                    this.addNews("정규시즌 모든 라운드가 종료되었습니다! 최종 진출을 위한 플레이인이 시작됩니다.", "sys");
+                    
+                    const legArr = state.groups.legend.map(id => ({ id, w: state.standings[id].w, pts: state.standings[id].pts })).sort((a,b) => b.w - a.w || b.pts - a.pts).map(t=>t.id);
+                    const risArr = state.groups.rise.map(id => ({ id, w: state.standings[id].w, pts: state.standings[id].pts })).sort((a,b) => b.w - a.w || b.pts - a.pts).map(t=>t.id);
+                    
+                    state.schedule.push({ id: `pi_1`, date: new Date(curDate), t1: legArr[4], t2: risArr[2], played: false, desc: 'PI 1R 1경기', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `pi_2`, date: new Date(curDate), t1: risArr[0], t2: risArr[1], played: false, desc: 'PI 1R 2경기', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `pi_3`, date: new Date(curDate), t1: 'TBD', t2: 'TBD', played: false, desc: 'PI 2R 승자조 (5시드 결정전)', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `pi_4`, date: new Date(curDate), t1: 'TBD', t2: 'TBD', played: false, desc: 'PI 2R 패자조', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `pi_5`, date: new Date(curDate), t1: 'TBD', t2: 'TBD', played: false, desc: 'PI 최종전 (6시드 결정전)', bo: 5, results: [] });
+
+                } else if (state.leaguePhase === 'PLAY_IN') {
+                    state.leaguePhase = 'PLAYOFFS';
+                    this.addNews("플레이인 단계가 종료되었습니다! 최후의 승자를 가릴 플레이오프가 시작됩니다.", "sys");
+                    
+                    const legArr = state.groups.legend.map(id => ({ id, w: state.standings[id].w, pts: state.standings[id].pts })).sort((a,b) => b.w - a.w || b.pts - a.pts).map(t=>t.id);
+                    
+                    state.schedule.push({ id: `po_1`, date: new Date(curDate), t1: legArr[2], t2: 'TBD', played: false, desc: 'PO 1R 1경기 (vs 6시드)', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `po_2`, date: new Date(curDate), t1: legArr[3], t2: 'TBD', played: false, desc: 'PO 1R 2경기 (vs 5시드)', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 2);
+                    state.schedule.push({ id: `po_3`, date: new Date(curDate), t1: legArr[0], t2: 'TBD', played: false, desc: 'PO 승자조 2R 1경기', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `po_4`, date: new Date(curDate), t1: legArr[1], t2: 'TBD', played: false, desc: 'PO 승자조 2R 2경기', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 3);
+                    state.schedule.push({ id: `po_6`, date: new Date(curDate), t1: 'TBD', t2: 'TBD', played: false, desc: 'PO 패자조 1R', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `po_7`, date: new Date(curDate), t1: 'TBD', t2: 'TBD', played: false, desc: 'PO 패자조 2R', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 2);
+                    state.schedule.push({ id: `po_5`, date: new Date(curDate), t1: 'TBD', t2: 'TBD', played: false, desc: 'PO 승자조 3R (결승 직행전)', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 1);
+                    state.schedule.push({ id: `po_8`, date: new Date(curDate), t1: 'TBD', t2: 'TBD', played: false, desc: 'PO 패자조 3R (최종 결승 진출전)', bo: 5, results: [] });
+                    curDate.setDate(curDate.getDate() + 6);
+                    state.schedule.push({ id: `po_9`, date: new Date(curDate), t1: 'TBD', t2: 'TBD', played: false, desc: 'GRAND FINALS', bo: 5, results: [] });
+                    
+                } else if (state.leaguePhase === 'PLAYOFFS') {
+                    this.addNews("모든 LCK 시즌이 종료되었습니다. 우승을 축하합니다!", "sys");
+                    state.leaguePhase = 'END';
                 }
             },
 
@@ -915,17 +1185,36 @@
                 sfx.play('click');
                 const saved = localStorage.getItem('lck_manager_save');
                 if(saved) {
-                    state = JSON.parse(saved);
-                    state.date = new Date(state.date);
-                    state.calMonth = new Date(state.calMonth);
-                    state.schedule.forEach(s => s.date = new Date(s.date));
-                    this.updateUI();
-                    this.showScreen('workspace');
+                    try {
+                        const parsedState = JSON.parse(saved);
+                        Object.assign(state, parsedState);
+                        
+                        state.date = new Date(state.date);
+                        state.calMonth = new Date(state.calMonth);
+                        state.schedule.forEach(s => s.date = new Date(s.date));
+                        state.news.forEach(n => n.date = new Date(n.date));
+                        
+                        if(!state.champStats) {
+                            state.champStats = {};
+                            window.DATA.champions.forEach(c => state.champStats[c.id] = { picks: 0, bans: 0, wins: 0, totalGames: 0 });
+                        }
+                        if(!state.playerConditions) state.playerConditions = {};
+                        if(!state.champStatFilter) state.champStatFilter = 'ALL';
+                        if(!state.champStatSort) state.champStatSort = { key: 'bp', order: 'desc' };
+                        
+                        this.updateUI();
+                        this.showScreen('workspace');
+                        this.toast("게임 데이터를 성공적으로 불러왔습니다.", "success");
+                    } catch(e) {
+                        this.toast("세이브 데이터를 불러오는데 실패했습니다.");
+                        console.error(e);
+                    }
                 }
             },
 
             saveGame(silent = false) {
-                localStorage.setItem('lck_manager_save', JSON.stringify(state));
+                const saveState = { ...state, activeSeries: null };
+                localStorage.setItem('lck_manager_save', JSON.stringify(saveState));
                 if(!silent) this.toast("게임이 저장되었습니다.", "success");
             },
 
@@ -936,6 +1225,18 @@
 
             advanceTime() {
                 sfx.play('click');
+                
+                for (const pId in state.playerConditions) {
+                    const pc = state.playerConditions[pId];
+                    if (pc.cond === 'injured' && pc.until) {
+                        if (state.date.getTime() >= new Date(pc.until).getTime()) {
+                            delete state.playerConditions[pId];
+                            const p = utils.getPlayer(pId);
+                            this.addNews(`${p.name} 선수가 부상에서 회복되어 로스터에 복귀했습니다.`, 'sys');
+                        }
+                    }
+                }
+
                 let todayMatches = state.schedule.filter(s => !s.played && s.date.getTime() === state.date.getTime());
                 
                 if (todayMatches.length > 0) {
@@ -961,12 +1262,25 @@
                     this.generatePhaseSchedule();
                 }
 
-                if(Math.random() < 0.1) {
-                    const myPlayers = DATA.players.filter(p => p.teamId === state.playerTeamId);
+                if(Math.random() < 0.08) {
+                    const myPlayers = window.DATA.players.filter(p => p.teamId === state.playerTeamId);
                     const rp = myPlayers[Math.floor(Math.random()*myPlayers.length)];
-                    if(rp.cond !== 'injured') {
-                        rp.cond = Math.random() < 0.2 ? 'injured' : 'bad';
-                        this.addNews(`${rp.name} 선수의 컨디션이 저하되었습니다. (${rp.cond === 'injured' ? '부상' : '컨디션 난조'})`);
+                    const isInjured = Math.random() < 0.2;
+                    
+                    if(!state.playerConditions[rp.id]) {
+                        if(isInjured) {
+                            const recDate = new Date(state.date);
+                            recDate.setDate(recDate.getDate() + Math.floor(Math.random() * 5) + 3); 
+                            state.playerConditions[rp.id] = { cond: 'injured', until: recDate.toISOString() };
+                            this.addNews(`${rp.name} 선수가 훈련 중 부상을 입었습니다. (예상 복귀: ${utils.formatDate(recDate)})`, 'error');
+                            
+                            for(const r in state.roster.starters) {
+                                if(state.roster.starters[r] === rp.id) state.roster.starters[r] = null;
+                            }
+                        } else {
+                            state.playerConditions[rp.id] = { cond: 'bad', until: null };
+                            this.addNews(`${rp.name} 선수의 컨디션이 저하되었습니다.`);
+                        }
                     }
                 }
                 this.updateUI();
@@ -977,25 +1291,160 @@
                 document.getElementById('modal-match-confirm').classList.add('hidden');
             },
 
+            updateTournamentBracket(matchId, winnerId, loserId) {
+                const getMatch = (id) => state.schedule.find(m => m.id === id);
+                const setMatch = (id, target, val) => { const m = getMatch(id); if(m) m[target] = val; };
+
+                if (matchId === 'msi_1') setMatch('msi_2', 't2', winnerId);
+                if (matchId === 'msi_2') setMatch('msi_4', 't2', winnerId); 
+                if (matchId === 'msi_3') { setMatch('msi_5', 't1', loserId); } 
+                if (matchId === 'msi_4') { setMatch('msi_5', 't2', winnerId); }
+                
+                if (matchId === 'pi_1') { setMatch('pi_3', 't1', winnerId); setMatch('pi_4', 't1', loserId); }
+                if (matchId === 'pi_2') { setMatch('pi_3', 't2', winnerId); setMatch('pi_4', 't2', loserId); }
+                if (matchId === 'pi_3') { setMatch('pi_5', 't1', loserId); setMatch('po_2', 't2', winnerId); } 
+                if (matchId === 'pi_4') { setMatch('pi_5', 't2', winnerId); }
+                if (matchId === 'pi_5') { setMatch('po_1', 't2', winnerId); } 
+                
+                if (matchId === 'po_1') setMatch('po_3', 't2', winnerId);
+                if (matchId === 'po_2') setMatch('po_4', 't2', winnerId);
+                if (matchId === 'po_3') { setMatch('po_5', 't1', winnerId); setMatch('po_6', 't1', loserId); }
+                if (matchId === 'po_4') { setMatch('po_5', 't2', winnerId); setMatch('po_6', 't2', loserId); }
+                if (matchId === 'po_6') setMatch('po_7', 't1', winnerId);
+                if (matchId === 'po_7') setMatch('po_8', 't1', winnerId);
+                if (matchId === 'po_5') { setMatch('po_9', 't1', winnerId); setMatch('po_8', 't2', loserId); } 
+                if (matchId === 'po_8') setMatch('po_9', 't2', winnerId);
+            },
+
             confirmMatchModal() {
                 sfx.play('click');
                 document.getElementById('modal-match-confirm').classList.add('hidden');
-                this.initDraft();
+                
+                for(const r of window.DATA.roles) {
+                    if(!state.roster.starters[r]) {
+                        this.toast(`${r} 포지션에 출전할 선수가 없습니다. 로스터를 채워주세요.`);
+                        this.switchTab('roster');
+                        return;
+                    }
+                }
+                const nextMatch = state.schedule.find(s => !s.played && (s.t1 === state.playerTeamId || s.t2 === state.playerTeamId));
+                this.initDraft(nextMatch.t1, nextMatch.t2);
             },
 
-            simMatch(match) {
-                if(match.t2 === 'TBD') { match.played = true; return; }
-                const winT1 = Math.random() > 0.5;
-                match.played = true;
+            showSideSelectModal() {
+                // 승리 시 진영 선택 모달 노출
+                document.getElementById('modal-side-select').classList.remove('hidden');
+            },
+            
+            confirmSideSelect(side) {
+                sfx.play('click');
+                document.getElementById('modal-side-select').classList.add('hidden');
                 
-                if(winT1) { match.resT1 = 2; match.resT2 = Math.random() > 0.4 ? 1 : 0; }
-                else { match.resT2 = 2; match.resT1 = Math.random() > 0.4 ? 1 : 0; }
+                const nextMatch = state.schedule.find(s => !s.played && (s.t1 === state.playerTeamId || s.t2 === state.playerTeamId));
+                const enemyId = nextMatch.t1 === state.playerTeamId ? nextMatch.t2 : nextMatch.t1;
                 
-                if(!match.desc || match.desc.includes('조') || match.desc.includes('정규시즌')) {
-                    if(winT1) { state.standings[match.t1].w++; state.standings[match.t2].l++; }
-                    else { state.standings[match.t2].w++; state.standings[match.t1].l++; }
-                    state.standings[match.t1].pts += (match.resT1 - match.resT2);
-                    state.standings[match.t2].pts += (match.resT2 - match.resT1);
+                if (side === 'B') {
+                    this.initDraft(state.playerTeamId, enemyId);
+                } else {
+                    this.initDraft(enemyId, state.playerTeamId);
+                }
+            },
+
+            simMatch(matchData) {
+                if(matchData.t2 === 'TBD' || matchData.t1 === 'TBD') { matchData.played = true; return; }
+                
+                const t1Players = window.DATA.players.filter(p => p.teamId === matchData.t1);
+                const t2Players = window.DATA.players.filter(p => p.teamId === matchData.t2);
+                const t1Pwr = t1Players.reduce((s, p) => s + p.tier, 0) + (Math.random()*10);
+                const t2Pwr = t2Players.reduce((s, p) => s + p.tier, 0) + (Math.random()*10);
+                
+                let winT1Chance = 0.5 + ((t1Pwr - t2Pwr) * 0.05);
+                winT1Chance = Math.max(0.1, Math.min(0.9, winT1Chance));
+                
+                matchData.played = true;
+                matchData.results = [];
+                let usedChamps = []; 
+                
+                const reqWins = matchData.bo === 5 ? 3 : 2;
+                let t1Wins = 0;
+                let t2Wins = 0;
+                let setNum = 1;
+                
+                while(t1Wins < reqWins && t2Wins < reqWins) {
+                    const setWinT1 = Math.random() < winT1Chance;
+                    if (setWinT1) t1Wins++;
+                    else t2Wins++;
+
+                    let bPicks = {};
+                    let rPicks = {};
+                    const t1IsBlue = setNum % 2 !== 0;
+                    
+                    window.DATA.roles.forEach(r => {
+                        let availT1 = window.DATA.champions.filter(c => c.role.includes(r) && !usedChamps.includes(c.id));
+                        availT1.sort((a,b) => a.tier - b.tier); 
+                        let pickT1 = availT1[Math.floor(Math.random() * Math.min(3, availT1.length))] || window.DATA.champions[0];
+                        usedChamps.push(pickT1.id);
+                        
+                        let availT2 = window.DATA.champions.filter(c => c.role.includes(r) && !usedChamps.includes(c.id));
+                        availT2.sort((a,b) => a.tier - b.tier);
+                        let pickT2 = availT2[Math.floor(Math.random() * Math.min(3, availT2.length))] || window.DATA.champions[1] || window.DATA.champions[0];
+                        usedChamps.push(pickT2.id);
+
+                        if (t1IsBlue) {
+                            bPicks[r] = pickT1.id;
+                            rPicks[r] = pickT2.id;
+                        } else {
+                            bPicks[r] = pickT2.id;
+                            rPicks[r] = pickT1.id;
+                        }
+                        
+                        if(!state.champStats[pickT1.id]) state.champStats[pickT1.id] = {picks:0, bans:0, wins:0, totalGames:0};
+                        if(!state.champStats[pickT2.id]) state.champStats[pickT2.id] = {picks:0, bans:0, wins:0, totalGames:0};
+                        state.champStats[pickT1.id].picks++;
+                        state.champStats[pickT2.id].picks++;
+                        
+                        if (setWinT1) {
+                            state.champStats[pickT1.id].wins++;
+                        } else {
+                            state.champStats[pickT2.id].wins++;
+                        }
+                    });
+
+                    for(let b=0; b<10; b++) {
+                        let randBan = window.DATA.champions[Math.floor(Math.random() * window.DATA.champions.length)].id;
+                        if(!state.champStats[randBan]) state.champStats[randBan] = {picks:0, bans:0, wins:0, totalGames:0};
+                        state.champStats[randBan].bans++;
+                    }
+
+                    window.DATA.champions.forEach(c => {
+                        if(state.champStats[c.id]) state.champStats[c.id].totalGames++;
+                    });
+
+                    matchData.results.push({
+                        set: setNum,
+                        winner: setWinT1 ? matchData.t1 : matchData.t2,
+                        bPicks: bPicks,
+                        rPicks: rPicks,
+                        blueId: t1IsBlue ? matchData.t1 : matchData.t2,
+                        redId: t1IsBlue ? matchData.t2 : matchData.t1
+                    });
+                    
+                    setNum++;
+                }
+
+                matchData.resT1 = t1Wins;
+                matchData.resT2 = t2Wins;
+                const winT1 = t1Wins > t2Wins;
+                
+                const winnerId = winT1 ? matchData.t1 : matchData.t2;
+                const loserId = winT1 ? matchData.t2 : matchData.t1;
+                this.updateTournamentBracket(matchData.id, winnerId, loserId);
+                
+                if(!matchData.desc || matchData.desc.includes('라운드') || matchData.desc.includes('R3') || matchData.desc.includes('R4')) {
+                    if(winT1) { state.standings[matchData.t1].w++; state.standings[matchData.t2].l++; }
+                    else { state.standings[matchData.t2].w++; state.standings[matchData.t1].l++; }
+                    state.standings[matchData.t1].pts += (matchData.resT1 - matchData.resT2);
+                    state.standings[matchData.t2].pts += (matchData.resT2 - matchData.resT1);
                 }
             },
 
@@ -1014,9 +1463,9 @@
                     const enemy = utils.getTeam(enemyId);
                     document.getElementById('top-next-event').innerText = `다음 일정: VS ${enemy.id} [${utils.formatDate(nextMatch.date)}]`;
                     
-                    document.getElementById('dash-my-logo').outerHTML = utils.getLogoHtml(t.id, 'w-12 h-12', 'dash-my-logo');
+                    document.getElementById('dash-my-logo').outerHTML = utils.getLogoHtml(t.id, 'w-12 h-12 mx-auto', 'dash-my-logo');
                     document.getElementById('dash-my-name').innerText = t.id;
-                    document.getElementById('dash-enemy-logo').outerHTML = utils.getLogoHtml(enemyId, 'w-12 h-12', 'dash-enemy-logo');
+                    document.getElementById('dash-enemy-logo').outerHTML = utils.getLogoHtml(enemyId, 'w-12 h-12 mx-auto', 'dash-enemy-logo');
                     document.getElementById('dash-enemy-name').innerText = enemy.id;
 
                     if(nextMatch.date.getTime() <= state.date.getTime()) {
@@ -1032,6 +1481,7 @@
                 this.renderRoster();
                 this.renderStandings();
                 this.renderSchedule();
+                this.renderChampStats();
             },
 
             renderNews() {
@@ -1040,6 +1490,7 @@
                 state.news.forEach(n => {
                     let color = 'text-gray-300';
                     if(n.type==='match') color='text-lck-accent font-bold';
+                    if(n.type==='error') color='text-red-500 font-bold';
                     el.innerHTML += `<div class="text-sm border-b border-gray-800 pb-2"><span class="text-xs text-gray-500 mr-2">[${utils.formatDate(n.date)}]</span><span class="${color}">${n.text}</span></div>`;
                 });
             },
@@ -1047,27 +1498,33 @@
             renderRoster() {
                 const renderCard = (pId, isStarter, role) => {
                     const p = utils.getPlayer(pId, role);
-                    if(!pId) return `<div class="bg-gray-900 border border-gray-700 h-40 rounded flex items-center justify-center text-xs text-gray-500 drop-zone" data-role="${role}" ondragover="event.preventDefault()" ondrop="app.onDrop(event, '${role}', true)">빈 슬롯</div>`;
-                    const cond = DATA.conditions.find(c=>c.id===p.cond) || DATA.conditions[2];
+                    if(!pId) return `<div class="bg-gray-900 border border-gray-700 h-44 rounded flex items-center justify-center text-xs text-gray-500 drop-zone" data-role="${role}" ondragover="event.preventDefault()" ondrop="app.onDrop(event, '${role}', true)">빈 슬롯</div>`;
                     
-                    const imgHtml = p.img ? `<img src="${p.img}" class="w-12 h-12 rounded-full object-cover mb-2 border border-gray-600 bg-gray-700" onerror="this.outerHTML='<i class=\\'fa-solid fa-user text-2xl text-gray-400 mb-2\\'></i>'">` : `<i class="fa-solid fa-user text-2xl text-gray-400 mb-2"></i>`;
+                    const pc = state.playerConditions[p.id];
+                    const condId = pc ? pc.cond : (p.cond || 'normal');
+                    const cond = window.DATA.conditions.find(c=>c.id===condId) || window.DATA.conditions[2];
+                    
+                    const imgHtml = p.img ? `<img src="${p.img}" class="w-14 h-14 rounded-full object-cover mb-2 border-2 border-gray-600 bg-gray-700" onerror="this.outerHTML='<i class=&quot;fa-solid fa-user text-3xl text-gray-400 mb-2&quot;></i>'">` : `<i class="fa-solid fa-user text-3xl text-gray-400 mb-2"></i>`;
+
+                    let disabledClass = condId === 'injured' ? 'grayscale opacity-70 border-red-500' : (isStarter ? 'border-lck-blue' : 'border-gray-600');
 
                     return `
-                        <div class="bg-gray-800 border ${isStarter?'border-lck-blue':'border-gray-600'} rounded p-3 flex flex-col items-center player-card h-40 justify-center" draggable="true" ondragstart="app.onDragStart(event, '${p.id}')">
-                            <div class="text-xs font-bold text-gray-500 mb-1">${p.role}</div>
+                        <div class="bg-gray-800 border-2 ${disabledClass} rounded p-3 flex flex-col items-center player-card h-44 justify-center relative" draggable="true" ondragstart="app.onDragStart(event, '${p.id}')">
+                            <div class="absolute top-1 left-2 text-xs font-black text-gray-600">${p.role}</div>
                             ${imgHtml}
                             <div class="font-bold text-white text-sm truncate w-full text-center">${p.name}</div>
                             <div class="mt-1">${utils.getStarHtml(p)}</div>
-                            <div class="text-[10px] mt-1 font-bold ${cond.color}">${cond.label}</div>
+                            <div class="text-[10px] mt-1 font-bold ${cond.color} bg-black/50 px-2 py-0.5 rounded-full">${cond.label}</div>
+                            ${condId === 'injured' ? `<div class="absolute inset-0 bg-red-900/30 flex items-center justify-center pointer-events-none rounded"><i class="fa-solid fa-ban text-4xl text-red-500/50"></i></div>` : ''}
                         </div>
                     `;
                 };
 
                 const startersEl = document.getElementById('roster-starters');
                 startersEl.innerHTML = '';
-                DATA.roles.forEach(r => {
+                window.DATA.roles.forEach(r => {
                     const zone = document.createElement('div');
-                    zone.className = 'drop-zone p-2 rounded h-44';
+                    zone.className = 'drop-zone p-2 rounded h-48';
                     zone.dataset.role = r;
                     zone.ondragover = e => e.preventDefault();
                     zone.ondrop = e => app.onDrop(e, r, true);
@@ -1081,7 +1538,7 @@
                     const wrap = document.createElement('div');
                     wrap.ondragover = e => e.preventDefault();
                     wrap.ondrop = e => app.onDrop(e, 'SUB', false);
-                    wrap.innerHTML = renderCard(id, false);
+                    wrap.innerHTML = renderCard(id, false, utils.getPlayer(id).role);
                     subsEl.appendChild(wrap);
                 });
             },
@@ -1092,11 +1549,9 @@
                 e.preventDefault();
                 const pId = e.dataTransfer.getData('text');
                 const p = utils.getPlayer(pId);
+                const pc = state.playerConditions[pId];
                 
-                if (isStarterZone && p.role !== targetRole) {
-                    this.toast('해당 포지션의 선수만 배치할 수 있습니다.'); return;
-                }
-                if (isStarterZone && p.cond === 'injured') {
+                if (isStarterZone && (pc && pc.cond === 'injured')) {
                     this.toast('부상 중인 선수는 경기에 출전할 수 없습니다.'); return;
                 }
                 sfx.play('click');
@@ -1116,27 +1571,124 @@
             },
 
             renderStandings() {
-                const arr = DATA.teams.map(t => ({ id: t.id, name: t.name, w: state.standings[t.id].w, l: state.standings[t.id].l, pts: state.standings[t.id].pts }))
+                const arr = window.DATA.teams.map(t => ({ id: t.id, name: t.name, w: state.standings[t.id].w, l: state.standings[t.id].l, pts: state.standings[t.id].pts }))
                                       .sort((a,b) => b.w - a.w || b.pts - a.pts);
 
                 const dashEl = document.getElementById('dash-standings');
                 const fullEl = document.getElementById('standings-list');
                 dashEl.innerHTML = ''; fullEl.innerHTML = '';
 
-                arr.forEach((t, i) => {
-                    dashEl.innerHTML += `
-                        <div class="flex justify-between items-center ${t.id===state.playerTeamId?'text-lck-accent font-bold':'text-gray-300'}">
-                            <span class="truncate pr-2">${i+1}. ${t.id}</span>
-                            <span class="shrink-0">${t.w}W ${t.l}L</span>
-                        </div>
-                    `;
-                    fullEl.innerHTML += `
-                        <tr class="border-b border-gray-800 ${t.id===state.playerTeamId?'bg-gray-800/50 text-lck-accent':''}">
-                            <td class="p-3 font-bold">${i+1}</td>
-                            <td class="p-3 flex items-center gap-2">${utils.getLogoHtml(t.id, 'w-6 h-6', '')} ${t.name}</td>
-                            <td class="p-3">${t.w}</td>
-                            <td class="p-3">${t.l}</td>
-                            <td class="p-3">${t.pts > 0 ? '+'+t.pts : t.pts}</td>
+                const renderRows = (teamsList) => {
+                    teamsList.forEach((t, i) => {
+                        dashEl.innerHTML += `
+                            <div class="flex justify-between items-center ${t.id===state.playerTeamId?'text-lck-accent font-bold':'text-gray-300'}">
+                                <span class="truncate pr-2">${i+1}. ${t.id}</span>
+                                <span class="shrink-0">${t.w}W ${t.l}L</span>
+                            </div>
+                        `;
+                        fullEl.innerHTML += `
+                            <tr class="border-b border-gray-800 ${t.id===state.playerTeamId?'bg-gray-800/50 text-lck-accent':''}">
+                                <td class="p-3 font-bold">${i+1}</td>
+                                <td class="p-3 flex items-center gap-2 justify-center">${utils.getLogoHtml(t.id, 'w-6 h-6', '')} ${t.name}</td>
+                                <td class="p-3">${t.w}</td>
+                                <td class="p-3">${t.l}</td>
+                                <td class="p-3">${t.pts > 0 ? '+'+t.pts : t.pts}</td>
+                            </tr>
+                        `;
+                    });
+                };
+
+                if (state.groups) {
+                    const leg = arr.filter(t => state.groups.legend.includes(t.id));
+                    const ris = arr.filter(t => state.groups.rise.includes(t.id));
+                    fullEl.innerHTML += `<tr class="bg-lck-accent/20 text-lck-accent font-bold text-xs"><td colspan="5" class="py-2 tracking-widest">[ 레전드 그룹 ]</td></tr>`;
+                    renderRows(leg);
+                    fullEl.innerHTML += `<tr class="bg-gray-700/50 text-gray-400 font-bold text-xs"><td colspan="5" class="py-2 tracking-widest mt-4">[ 라이즈 그룹 ]</td></tr>`;
+                    renderRows(ris);
+                } else {
+                    renderRows(arr);
+                }
+            },
+
+            filterChampStats(role) {
+                sfx.play('click');
+                state.champStatFilter = role;
+                document.querySelectorAll('.stat-role-btn').forEach(b => {
+                    b.classList.remove('bg-gray-700', 'text-white');
+                    b.classList.add('text-gray-400');
+                    if(b.innerText === role) {
+                        b.classList.add('bg-gray-700', 'text-white');
+                        b.classList.remove('text-gray-400');
+                    }
+                });
+                this.renderChampStats();
+            },
+
+            sortChampStats(key) {
+                sfx.play('click');
+                if (state.champStatSort.key === key) {
+                    state.champStatSort.order = state.champStatSort.order === 'desc' ? 'asc' : 'desc';
+                } else {
+                    state.champStatSort.key = key;
+                    state.champStatSort.order = 'desc';
+                }
+                
+                document.querySelectorAll('.sort-icon').forEach(icon => {
+                    icon.className = 'fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]';
+                });
+                
+                const activeIcon = document.getElementById(`sort-icon-${key}`);
+                if(activeIcon) {
+                    activeIcon.className = `fa-solid fa-sort-${state.champStatSort.order === 'desc' ? 'down' : 'up'} sort-icon text-lck-accent ml-1 text-[10px]`;
+                }
+                
+                this.renderChampStats();
+            },
+
+            renderChampStats() {
+                const el = document.getElementById('champ-stats-list');
+                el.innerHTML = '';
+                
+                let champs = window.DATA.champions.filter(c => state.champStatFilter === 'ALL' || c.role.includes(state.champStatFilter));
+                
+                champs.sort((a,b) => {
+                    const stA = state.champStats[a.id];
+                    const stB = state.champStats[b.id];
+                    
+                    const getVal = (st) => {
+                        if (state.champStatSort.key === 'pick') return st.totalGames ? (st.picks / st.totalGames) : 0;
+                        if (state.champStatSort.key === 'ban') return st.totalGames ? (st.bans / st.totalGames) : 0;
+                        if (state.champStatSort.key === 'bp') return st.totalGames ? ((st.picks + st.bans) / st.totalGames) : 0;
+                        if (state.champStatSort.key === 'win') return st.picks ? (st.wins / st.picks) : 0;
+                        return 0;
+                    };
+                    
+                    const valA = getVal(stA);
+                    const valB = getVal(stB);
+                    
+                    if (valA === valB) return b.name.localeCompare(a.name, 'ko');
+                    return state.champStatSort.order === 'desc' ? valB - valA : valA - valB;
+                });
+
+                champs.forEach(c => {
+                    const st = state.champStats[c.id];
+                    const pRate = st.totalGames ? Math.round((st.picks / st.totalGames) * 100) : 0;
+                    const bRate = st.totalGames ? Math.round((st.bans / st.totalGames) * 100) : 0;
+                    const pbRate = st.totalGames ? Math.round(((st.picks + st.bans) / st.totalGames) * 100) : 0;
+                    const wRate = st.picks ? Math.round((st.wins / st.picks) * 100) : 0;
+
+                    el.innerHTML += `
+                        <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+                            <td class="p-2 w-[40%]">
+                                <div class="flex items-center gap-3 pl-4">
+                                    <img src="${utils.getChampImg(c.id)}" class="w-8 h-8 rounded border border-gray-600 bg-black shrink-0">
+                                    <span class="font-bold truncate text-left w-full">${c.name}</span>
+                                </div>
+                            </td>
+                            <td class="p-2 w-[15%]">${pRate}%</td>
+                            <td class="p-2 w-[15%]">${bRate}%</td>
+                            <td class="p-2 text-purple-400 font-bold w-[15%]">${pbRate}%</td>
+                            <td class="p-2 font-bold w-[15%] ${wRate >= 50 ? 'text-green-400' : 'text-red-400'}">${wRate}%</td>
                         </tr>
                     `;
                 });
@@ -1149,7 +1701,14 @@
             },
 
             renderSchedule() {
-                const phaseText = { 'REGULAR_1_2': '정규시즌 1, 2 라운드', 'MSI_QUAL': 'ROAD TO MSI 예선', 'REGULAR_3_4': '정규시즌 3, 4 라운드 (레전드/라이즈 그룹)' };
+                const phaseText = { 
+                    'REGULAR_1_2': '정규시즌 1, 2 라운드', 
+                    'MSI_QUAL': 'ROAD TO MSI 예선', 
+                    'REGULAR_3_4': '정규시즌 3, 4 라운드 (레전드/라이즈 그룹)',
+                    'PLAY_IN': '플레이인 스테이지',
+                    'PLAYOFFS': '플레이오프',
+                    'END': '시즌 종료'
+                };
                 document.getElementById('schedule-phase-info').innerText = `현재 진행: ${phaseText[state.leaguePhase] || '리그 일정'}`;
                 
                 const year = state.calMonth.getFullYear();
@@ -1171,7 +1730,7 @@
                     const curDateObj = new Date(dateStr);
                     const isToday = curDateObj.getTime() === state.date.getTime();
                     
-                    let cellHtml = `<div class="bg-gray-800 border border-gray-700 rounded p-1 flex flex-col cal-cell ${isToday ? 'cal-today' : ''}">
+                    let cellHtml = `<div class="bg-gray-800 border border-gray-700 rounded p-1 flex flex-col cal-cell ${isToday ? 'cal-today shadow-[0_0_10px_rgba(200,155,60,0.5)]' : ''}">
                         <div class="text-right text-xs ${isToday?'text-lck-accent font-bold':'text-gray-400'} mb-1">${d}</div>
                         <div class="flex-1 flex flex-col gap-1 overflow-y-auto">`;
                     
@@ -1181,7 +1740,7 @@
                         const t1 = utils.getTeam(s.t1) || {name: 'TBD', id: 'tbd', color: '#666'};
                         const t2 = utils.getTeam(s.t2) || {name: 'TBD', id: 'tbd', color: '#666'};
                         const isMyMatch = s.t1 === state.playerTeamId || s.t2 === state.playerTeamId;
-                        let bgClass = isMyMatch ? 'bg-gray-700 border-l-2 border-lck-accent' : 'bg-gray-900';
+                        let bgClass = isMyMatch ? 'bg-gray-700 border-l-2 border-lck-accent cursor-pointer hover:bg-gray-600' : 'bg-gray-900 cursor-pointer hover:bg-gray-800';
                         
                         let scoreHtml = 'vs';
                         if(s.played) {
@@ -1189,7 +1748,7 @@
                         }
 
                         cellHtml += `
-                            <div class="${bgClass} rounded p-1.5 text-xs flex justify-center items-center gap-1 whitespace-nowrap overflow-hidden">
+                            <div onclick="app.showMatchDetail('${s.id}')" class="${bgClass} rounded p-1.5 text-xs flex justify-center items-center gap-1 whitespace-nowrap overflow-hidden transition">
                                 ${utils.getLogoHtml(t1.id, 'w-6 h-6 text-[10px]', '')}
                                 <div class="bg-black/50 px-2 py-0.5 rounded text-center shrink-0 min-w-[32px] font-bold tracking-widest">${scoreHtml}</div>
                                 ${utils.getLogoHtml(t2.id, 'w-6 h-6 text-[10px]', '')}
@@ -1202,22 +1761,85 @@
                 }
             },
 
-            initDraft() {
+            showMatchDetail(matchId) {
+                const m = state.schedule.find(s => s.id === matchId);
+                if(!m || !m.played || !m.results || m.results.length === 0) {
+                    this.toast("해당 경기의 상세 기록이 없습니다.");
+                    return;
+                }
+                
+                sfx.play('click');
+                document.getElementById('modal-match-detail').classList.remove('hidden');
+                const container = document.getElementById('match-detail-content');
+                container.innerHTML = `
+                    <div class="flex justify-between items-center bg-gray-900 p-4 rounded-lg border border-gray-700">
+                        <div class="flex items-center gap-3 w-1/3">
+                            ${utils.getLogoHtml(m.t1, 'w-12 h-12')}
+                            <span class="text-2xl font-bold text-white">${m.t1}</span>
+                        </div>
+                        <div class="text-4xl font-black text-gray-500 w-1/3 text-center"><span class="${m.resT1>m.resT2?'text-lck-blue':''}">${m.resT1}</span> : <span class="${m.resT2>m.resT1?'text-lck-red':''}">${m.resT2}</span></div>
+                        <div class="flex items-center gap-3 flex-row-reverse w-1/3">
+                            ${utils.getLogoHtml(m.t2, 'w-12 h-12')}
+                            <span class="text-2xl font-bold text-white">${m.t2}</span>
+                        </div>
+                    </div>
+                `;
+
+                m.results.forEach(res => {
+                    const isT1Win = res.winner === m.t1;
+                    const t1IsBlue = res.blueId ? res.blueId === m.t1 : (res.set % 2 !== 0);
+                    
+                    const t1Picks = t1IsBlue ? res.bPicks : res.rPicks;
+                    const t2Picks = t1IsBlue ? res.rPicks : res.bPicks;
+                    
+                    const t1ColorClass = t1IsBlue ? 'border-lck-blue' : 'border-lck-red';
+                    const t2ColorClass = t1IsBlue ? 'border-lck-red' : 'border-lck-blue';
+                    const t1WinColor = t1IsBlue ? 'text-lck-blue' : 'text-lck-red';
+                    const t2WinColor = t1IsBlue ? 'text-lck-red' : 'text-lck-blue';
+                    
+                    const renderPicksRow = (picksObj) => {
+                        let html = '';
+                        window.DATA.roles.forEach(r => {
+                            const cId = picksObj[r];
+                            if(cId) html += `<img src="${utils.getChampImg(cId)}" class="w-8 h-8 rounded border border-gray-600 bg-black" title="${utils.getChamp(cId)?.name || ''}">`;
+                            else html += `<div class="w-8 h-8 border border-gray-700 border-dashed rounded"></div>`;
+                        });
+                        return html;
+                    };
+
+                    container.innerHTML += `
+                        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 flex flex-col gap-3">
+                            <div class="text-lck-accent font-bold text-sm tracking-widest text-center border-b border-gray-700 pb-2">SET ${res.set}</div>
+                            <div class="flex justify-between items-center">
+                                <div class="flex gap-1 bg-gray-900 p-1.5 rounded border ${isT1Win ? t1ColorClass : 'border-transparent opacity-60'}">${renderPicksRow(t1Picks)}</div>
+                                <div class="text-xs font-bold ${isT1Win ? t1WinColor : 'text-gray-500'}">WIN</div>
+                                <div class="text-xs font-bold ${!isT1Win ? t2WinColor : 'text-gray-500'}">WIN</div>
+                                <div class="flex gap-1 bg-gray-900 p-1.5 rounded border ${!isT1Win ? t2ColorClass : 'border-transparent opacity-60'}">${renderPicksRow(t2Picks)}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            },
+            
+            closeMatchDetailModal() {
+                sfx.play('click');
+                document.getElementById('modal-match-detail').classList.add('hidden');
+            },
+
+            initDraft(blueId = null, redId = null) {
+                if(!blueId || !redId) return; 
+                
                 const nextMatch = state.schedule.find(s => !s.played && (s.t1 === state.playerTeamId || s.t2 === state.playerTeamId));
                 if(!nextMatch) return;
-                const enemyId = nextMatch.t1 === state.playerTeamId ? nextMatch.t2 : nextMatch.t1;
                 
                 if(!state.activeSeries || state.activeSeries.match !== nextMatch) {
                     state.activeSeries = { match: nextMatch, myScore: 0, enScore: 0, set: 1, tactic: 'balance', usedChamps: [] };
+                    nextMatch.results = [];
                 }
                 
-                const isHome = nextMatch.t1 === state.playerTeamId;
-                const playerIsBlue = (isHome && state.activeSeries.set % 2 !== 0) || (!isHome && state.activeSeries.set % 2 === 0);
-                
-                const blueTeamId = playerIsBlue ? state.playerTeamId : enemyId;
-                const redTeamId = playerIsBlue ? enemyId : state.playerTeamId;
+                const playerIsBlue = blueId === state.playerTeamId;
 
-                draft.init(blueTeamId, redTeamId, playerIsBlue);
+                draft.init(blueId, redId, playerIsBlue);
                 this.switchTab('draft');
             },
             
@@ -1232,8 +1854,12 @@
                 
                 const enemyId = isHome ? series.match.t2 : series.match.t1;
                 const win = series.myScore > series.enScore;
+                
+                const winnerId = win ? state.playerTeamId : enemyId;
+                const loserId = win ? enemyId : state.playerTeamId;
+                this.updateTournamentBracket(series.match.id, winnerId, loserId);
 
-                if(!series.match.desc || series.match.desc.includes('조') || series.match.desc.includes('정규시즌')) {
+                if(!series.match.desc || series.match.desc.includes('라운드') || series.match.desc.includes('R3') || series.match.desc.includes('R4')) {
                     if(win) { state.standings[state.playerTeamId].w++; state.standings[enemyId].l++; }
                     else { state.standings[enemyId].w++; state.standings[state.playerTeamId].l++; }
                     state.standings[state.playerTeamId].pts += (series.myScore - series.enScore);
@@ -1253,10 +1879,8 @@
         // ==========================================
         // DRAFT MANAGER
         // ==========================================
-        const draft = {
-            state: {
-                searchQuery: '' 
-            },
+        window.draft = {
+            state: { searchQuery: '' },
             sequence: [
                 { side: 'B', act: 'BAN' }, { side: 'R', act: 'BAN' }, { side: 'B', act: 'BAN' }, 
                 { side: 'R', act: 'BAN' }, { side: 'B', act: 'BAN' }, { side: 'R', act: 'BAN' }, 
@@ -1278,8 +1902,8 @@
 
                 document.getElementById('draft-blue-name').innerText = utils.getTeam(blueTeamId).id;
                 document.getElementById('draft-red-name').innerText = utils.getTeam(redTeamId).id;
-                document.getElementById('draft-blue-logo').outerHTML = utils.getLogoHtml(blueTeamId, 'w-10 h-10 shrink-0', 'draft-blue-logo');
-                document.getElementById('draft-red-logo').outerHTML = utils.getLogoHtml(redTeamId, 'w-10 h-10 shrink-0', 'draft-red-logo');
+                document.getElementById('draft-blue-logo').outerHTML = utils.getLogoHtml(blueTeamId, 'w-10 h-10 shrink-0 border border-gray-600', 'draft-blue-logo');
+                document.getElementById('draft-red-logo').outerHTML = utils.getLogoHtml(redTeamId, 'w-10 h-10 shrink-0 border border-gray-600', 'draft-red-logo');
                 document.getElementById('btn-draft-start').classList.add('hidden');
                 document.getElementById('draft-search-input').value = '';
 
@@ -1303,9 +1927,8 @@
                 const pool = document.getElementById('draft-pool');
                 pool.innerHTML = '';
                 
-                let champs = typeof DATA !== 'undefined' ? DATA.champions.filter(c => role === 'ALL' || c.role === role) : [];
+                let champs = typeof window.DATA !== 'undefined' ? window.DATA.champions.filter(c => role === 'ALL' || c.role.includes(role)) : [];
                 
-                // 검색어 필터링 적용 (띄어쓰기 무시)
                 if (this.state.searchQuery) {
                     champs = champs.filter(c => 
                         c.name.toLowerCase().replace(/\s/g, '').includes(this.state.searchQuery.replace(/\s/g, '')) || 
@@ -1318,8 +1941,6 @@
                 champs.forEach(c => {
                     const isBanned = this.state.bBans.includes(c.id) || this.state.rBans.includes(c.id);
                     const isPicked = Object.values(this.state.bPicks).includes(c.id) || Object.values(this.state.rPicks).includes(c.id);
-                    
-                    // 피어리스 로직 (이전 세트에 사용한 챔피언)
                     const isUsed = state.activeSeries && state.activeSeries.usedChamps && state.activeSeries.usedChamps.includes(c.id);
 
                     let classMod = '';
@@ -1334,19 +1955,35 @@
                     else if (c.tier == 4) tierColor = 'bg-tier-4';
                     else if (c.tier == 5) tierColor = 'bg-tier-5';
 
+                    const st = state.champStats[c.id] || { picks: 0, bans: 0, wins: 0, totalGames: 0 };
+                    const pRate = st.totalGames ? Math.round((st.picks / st.totalGames) * 100) : 0;
+                    const bRate = st.totalGames ? Math.round((st.bans / st.totalGames) * 100) : 0;
+                    const pbRate = st.totalGames ? Math.round(((st.picks + st.bans) / st.totalGames) * 100) : 0;
+                    const wRate = st.picks ? Math.round((st.wins / st.picks) * 100) : 0;
+
                     pool.innerHTML += `
-                        <div class="bg-gray-800 rounded p-1 champ-item flex flex-col items-center ${classMod}" id="draft-c-${c.id}" onclick="draft.selectChamp('${c.id}')">
+                        <div class="bg-gray-800 rounded p-1 champ-item relative group flex flex-col items-center ${classMod}" id="draft-c-${c.id}" onclick="draft.selectChamp('${c.id}')">
                             <div class="relative w-full">
-                                <img src="${utils.getChampImg(c.id)}" class="champ-portrait rounded" onerror="this.src='https://via.placeholder.com/120/111/fff?text=?';">
+                                <img src="${utils.getChampImg(c.id)}" class="champ-portrait rounded bg-black" onerror="this.src='https://via.placeholder.com/120/111/fff?text=?';">
                                 <div class="tier-badge ${tierColor}">${c.tier}</div>
                             </div>
                             <div class="text-[10px] font-bold text-white mt-1 truncate w-full text-center">${c.name}</div>
+                            
+                            <!-- Hover Overlay -->
+                            <div class="absolute inset-0 bg-black/95 flex flex-col justify-center items-center opacity-0 group-hover:opacity-100 transition-all duration-200 z-50 pointer-events-none p-2 rounded border-2 border-lck-accent shadow-xl scale-[1.03]">
+                                <div class="text-[13px] font-black text-lck-accent mb-1 border-b border-gray-700 w-full text-center pb-1 truncate">${c.name}</div>
+                                <div class="flex flex-col gap-1 text-[11px] text-white font-mono w-full px-1">
+                                    <div class="flex justify-between"><span class="text-gray-400">픽:</span><span class="text-blue-300 font-bold">${pRate}%</span></div>
+                                    <div class="flex justify-between"><span class="text-gray-400">밴:</span><span class="text-red-300 font-bold">${bRate}%</span></div>
+                                    <div class="flex justify-between"><span class="text-gray-400">BP:</span><span class="text-purple-300 font-bold">${pbRate}%</span></div>
+                                    <div class="flex justify-between border-t border-gray-700 pt-1 mt-0.5"><span class="text-gray-400">승:</span><span class="font-bold ${wRate >= 50 ? 'text-green-400' : 'text-orange-400'}">${wRate}%</span></div>
+                                </div>
+                            </div>
                         </div>
                     `;
                 });
             },
 
-            // 대화창 업데이트 (적팀 로고 및 선수 이미지 지원)
             updateChat(playerName, message, playerObj = null, teamId = null) {
                 document.getElementById('chat-player-name').innerText = playerName;
                 document.getElementById('chat-message').innerText = message;
@@ -1355,7 +1992,6 @@
                 if (playerObj && playerObj.img) {
                     avatarEl.innerHTML = `<img src="${playerObj.img}" class="w-full h-full object-cover">`;
                 } else if (teamId) {
-                    // 상대팀일 경우 로고 표시
                     avatarEl.innerHTML = utils.getLogoHtml(teamId, 'w-full h-full');
                 } else {
                     avatarEl.innerHTML = `<i class="fa-solid fa-users text-3xl text-gray-400"></i>`;
@@ -1381,7 +2017,6 @@
                 
                 const champ = utils.getChamp(id);
                 
-                // 멘트는 processStep에서 설정된 초기 제안 멘트를 그대로 유지하므로 여기서는 멘트 수정 제거
                 if(cur.act === 'BAN') {
                     btnBan.classList.remove('hidden');
                 } else {
@@ -1389,7 +2024,8 @@
                     roleSel.classList.remove('hidden');
                     
                     const myPicks = cur.side === 'B' ? this.state.bPicks : this.state.rPicks;
-                    if(myPicks[champ.role] === null) this.selectRole(champ.role);
+                    const prefRole = champ.role.split(',')[0];
+                    if(myPicks[prefRole] === null) this.selectRole(prefRole);
                     else {
                         const freeRole = Object.keys(myPicks).find(k => myPicks[k] === null);
                         if(freeRole) this.selectRole(freeRole);
@@ -1405,21 +2041,75 @@
                 });
             },
 
-            confirmAction() {
+            playAnimation(champId, isBan) {
+                return new Promise(resolve => {
+                    const overlay = document.getElementById('bp-anim-overlay');
+                    const card = document.getElementById('bp-anim-card');
+                    const img = document.getElementById('bp-anim-img');
+                    const slash = document.getElementById('bp-anim-slash');
+                    
+                    img.src = utils.getChampImg(champId);
+                    overlay.classList.remove('hidden');
+                    setTimeout(() => overlay.classList.add('active'), 10);
+                    
+                    card.className = "relative w-48 h-48 sm:w-64 sm:h-64 shadow-2xl flex items-center justify-center border-4 border-transparent rounded-lg overflow-hidden bg-black transition-all duration-500 ease-out";
+                    slash.classList.remove('anim-ban-slash');
+                    card.style.transform = 'scale(1)';
+                    
+                    setTimeout(() => {
+                        card.classList.add('anim-zoom');
+                        
+                        if(isBan) {
+                            card.classList.add('anim-glow-ban');
+                            setTimeout(() => {
+                                slash.classList.add('anim-ban-slash');
+                                sfx.play('tower'); 
+                                setTimeout(() => {
+                                    card.classList.add('anim-grayscale');
+                                    card.classList.add('anim-fly-ban');
+                                    setTimeout(() => { 
+                                        overlay.classList.remove('active'); 
+                                        setTimeout(() => { overlay.classList.add('hidden'); resolve(); }, 300);
+                                    }, 500);
+                                }, 300);
+                            }, 400);
+                        } else {
+                            card.classList.add('anim-glow-pick'); 
+                            setTimeout(() => { 
+                                card.classList.add('anim-fly-pick');
+                                setTimeout(() => { 
+                                    overlay.classList.remove('active'); 
+                                    setTimeout(() => { overlay.classList.add('hidden'); resolve(); }, 300);
+                                }, 500); 
+                            }, 800);
+                        }
+                    }, 50);
+                });
+            },
+
+            async confirmAction() {
                 if(!this.state.selectedChampId) return;
+                
                 const cur = this.sequence[this.state.step];
                 const myPicks = cur.side === 'B' ? this.state.bPicks : this.state.rPicks;
                 const myPickOrder = cur.side === 'B' ? this.state.bPickOrder : this.state.rPickOrder;
                 
+                if (cur.act === 'PICK' && myPicks[this.state.selectedRole] !== null) {
+                    app.toast("해당 라인은 이미 픽이 완료되었습니다.");
+                    return;
+                }
+
+                document.getElementById('btn-draft-ban').classList.add('hidden');
+                document.getElementById('btn-draft-pick').classList.add('hidden');
+                document.getElementById('draft-role-select').classList.add('hidden');
+
+                await this.playAnimation(this.state.selectedChampId, cur.act === 'BAN');
+
                 if(cur.act === 'BAN') {
                     if(cur.side === 'B') this.state.bBans.push(this.state.selectedChampId);
                     else this.state.rBans.push(this.state.selectedChampId);
                     sfx.play('ban');
                 } else {
-                    if(myPicks[this.state.selectedRole] !== null) {
-                        app.toast("해당 라인은 이미 픽이 완료되었습니다. 다른 라인을 선택하세요.");
-                        return;
-                    }
                     myPicks[this.state.selectedRole] = this.state.selectedChampId;
                     myPickOrder.push({ id: this.state.selectedChampId, role: this.state.selectedRole });
                     sfx.play('pick');
@@ -1428,10 +2118,6 @@
                 this.state.selectedChampId = null;
                 this.state.selectedRole = null;
                 this.state.step++;
-                
-                document.getElementById('btn-draft-ban').classList.add('hidden');
-                document.getElementById('btn-draft-pick').classList.add('hidden');
-                document.getElementById('draft-role-select').classList.add('hidden');
 
                 this.filter(document.querySelector('.role-filter.active').innerText);
                 this.updateUI();
@@ -1451,8 +2137,27 @@
                     state.activeSeries.usedChamps = state.activeSeries.usedChamps || [];
                     state.activeSeries.usedChamps.push(...Object.values(this.state.bPicks), ...Object.values(this.state.rPicks));
                     
+                    const updateStat = (id, type) => {
+                        if(!state.champStats[id]) state.champStats[id] = {picks:0, bans:0, wins:0, totalGames:0};
+                        if(type==='pick') state.champStats[id].picks++;
+                        if(type==='ban') state.champStats[id].bans++;
+                    };
+                    
+                    this.state.bBans.concat(this.state.rBans).forEach(c => updateStat(c, 'ban'));
+                    Object.values(this.state.bPicks).concat(Object.values(this.state.rPicks)).forEach(c => updateStat(c, 'pick'));
+                    window.DATA.champions.forEach(c => { if(state.champStats[c.id]) state.champStats[c.id].totalGames++; });
+                    
+                    state.activeSeries.match.results.push({
+                        set: state.activeSeries.set,
+                        winner: null,
+                        bPicks: {...this.state.bPicks},
+                        rPicks: {...this.state.rPicks},
+                        blueId: this.state.blueId,
+                        redId: this.state.redId
+                    });
+
                     this.updateChat('팀원들', '"밴픽이 완료되었습니다. 경기에 집중하겠습니다."', null);
-                    this.updateUI(); // 최후 정렬
+                    this.updateUI(); 
                     return;
                 }
 
@@ -1463,22 +2168,24 @@
                 const myPicksObj = cur.side === 'B' ? this.state.bPicks : this.state.rPicks;
                 const oppPicksObj = cur.side === 'B' ? this.state.rPicks : this.state.bPicks;
                 const oppFilledRoles = Object.keys(oppPicksObj).filter(k => oppPicksObj[k] !== null);
-                const myFilledRoles = Object.keys(myPicksObj).filter(k => myPicksObj[k] !== null);
                 
                 const usedChamps = state.activeSeries.usedChamps || [];
-                let available = DATA.champions.filter(c => !usedChamps.includes(c.id) && !this.state.bBans.includes(c.id) && !this.state.rBans.includes(c.id) && !Object.values(this.state.bPicks).includes(c.id) && !Object.values(this.state.rPicks).includes(c.id));
+                let available = window.DATA.champions.filter(c => !usedChamps.includes(c.id) && !this.state.bBans.includes(c.id) && !this.state.rBans.includes(c.id) && !Object.values(this.state.bPicks).includes(c.id) && !Object.values(this.state.rPicks).includes(c.id));
                 const tierVal = { 'OP': 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 };
 
                 if(isPlayerTurn) {
                     let suggestionPool = available;
                     if (cur.act === 'BAN' && this.state.step >= 12) {
-                        let validBans = available.filter(c => !oppFilledRoles.includes(c.role));
+                        let validBans = available.filter(c => {
+                            const mainRole = c.role.split(',')[0];
+                            return !oppFilledRoles.includes(mainRole);
+                        });
                         if(validBans.length > 0) suggestionPool = validBans;
                     }
                     if(cur.act === 'PICK') {
                         const emptyRoles = Object.keys(myPicksObj).filter(k => myPicksObj[k] === null);
                         const targetRole = emptyRoles[Math.floor(Math.random() * emptyRoles.length)];
-                        let validPicks = available.filter(c => c.role === targetRole);
+                        let validPicks = available.filter(c => c.role.includes(targetRole));
                         if(validPicks.length > 0) suggestionPool = validPicks;
                     }
                     
@@ -1486,13 +2193,14 @@
                     let topN = suggestionPool.slice(0, 3);
                     let suggestion = topN[Math.floor(Math.random() * topN.length)] || available[0];
                     
-                    let pId = state.roster.starters[suggestion.role];
+                    let prefRole = suggestion.role.split(',')[0];
+                    let pId = state.roster.starters[prefRole];
                     let p = utils.getPlayer(pId);
                     
                     if (cur.act === 'BAN') {
-                        this.updateChat(p ? p.name : '팀원들', `"상대방 ${suggestion.name} 까다로운데 밴 하는건 어떨까요?"`, p);
+                        this.updateChat(p ? p.name : '팀원들', `"${suggestion.name} 밴 하는건 어떨까요?"`, p);
                     } else {
-                        this.updateChat(p ? p.name : '팀원들', `"저 ${suggestion.name} 자신 있는데 픽 하는건 어떨까요?"`, p);
+                        this.updateChat(p ? p.name : '팀원들', `"${suggestion.name} 픽 하는건 어떨까요?"`, p);
                     }
                     
                 } else {
@@ -1503,13 +2211,13 @@
                     setTimeout(() => {
                         let suggestionPool = available;
                         if(cur.act === 'BAN' && this.state.step >= 12) {
-                            let validBans = available.filter(c => !oppFilledRoles.includes(c.role));
+                            let validBans = available.filter(c => !oppFilledRoles.includes(c.role.split(',')[0]));
                             if(validBans.length > 0) suggestionPool = validBans;
                         }
                         if(cur.act === 'PICK') {
                             const emptyRoles = Object.keys(myPicksObj).filter(k => myPicksObj[k] === null);
                             const targetRole = emptyRoles[Math.floor(Math.random() * emptyRoles.length)];
-                            let roleSpecificChamps = available.filter(c => c.role === targetRole);
+                            let roleSpecificChamps = available.filter(c => c.role.includes(targetRole));
                             if(roleSpecificChamps.length > 0) suggestionPool = roleSpecificChamps;
                         }
                         
@@ -1518,7 +2226,7 @@
                         let suggestion = topN[Math.floor(Math.random() * topN.length)] || available[0];
                         
                         this.state.selectedChampId = suggestion.id;
-                        this.state.selectedRole = suggestion.role; 
+                        this.state.selectedRole = suggestion.role.split(',')[0]; 
                         
                         if (cur.act === 'PICK' && myPicksObj[this.state.selectedRole] !== null) {
                             this.state.selectedRole = Object.keys(myPicksObj).find(k => myPicksObj[k] === null);
@@ -1533,7 +2241,7 @@
                     const el = document.getElementById(elId);
                     el.innerHTML = '';
                     for(let i=0; i<5; i++) {
-                        if(bans[i]) el.innerHTML += `<img src="${utils.getChampImg(bans[i])}" class="w-10 h-10 rounded grayscale border border-gray-600">`;
+                        if(bans[i]) el.innerHTML += `<img src="${utils.getChampImg(bans[i])}" class="w-10 h-10 rounded grayscale border border-gray-600 bg-black">`;
                         else el.innerHTML += `<div class="w-10 h-10 rounded border border-gray-700 border-dashed bg-gray-800"></div>`;
                     }
                 };
@@ -1548,8 +2256,8 @@
                     const teamId = side === 'B' ? this.state.blueId : this.state.redId;
                     const color = side === 'B' ? 'border-lck-blue' : 'border-lck-red';
                     
-                    DATA.roles.forEach((roleStr, index) => {
-                        const pList = DATA.players.filter(pl => pl.teamId === teamId && pl.role === roleStr);
+                    window.DATA.roles.forEach((roleStr, index) => {
+                        const pList = window.DATA.players.filter(pl => pl.teamId === teamId && pl.role.includes(roleStr));
                         const p = pList.length > 0 ? pList[0] : { name: teamId + ' ' + roleStr, img: '' };
                         
                         let champId = null;
@@ -1562,9 +2270,9 @@
                         let c = null;
                         if (champId) c = utils.getChamp(champId);
 
-                        const pImgHtml = p.img ? `<img src="${p.img}" class="w-12 h-12 rounded-full object-cover border-2 border-gray-700">` : `<div class="w-12 h-12 rounded-full bg-gray-700 border-2 border-gray-600 flex items-center justify-center"><i class="fa-solid fa-user text-gray-400"></i></div>`;
+                        const pImgHtml = p.img ? `<img src="${p.img}" class="w-12 h-12 rounded-full object-cover border-2 border-gray-700 bg-black">` : `<div class="w-12 h-12 rounded-full bg-gray-700 border-2 border-gray-600 flex items-center justify-center"><i class="fa-solid fa-user text-gray-400"></i></div>`;
                         let cImgHtml = `<div class="w-14 h-14 rounded border border-gray-700 border-dashed bg-gray-800/30 flex items-center justify-center opacity-50"><span class="text-[8px] text-gray-400 font-bold">PICK ${index+1}</span></div>`;
-                        if (c) cImgHtml = `<img src="${utils.getChampImg(c.id)}" class="w-14 h-14 rounded border border-gray-500 bg-black object-cover">`;
+                        if (c) cImgHtml = `<img src="${utils.getChampImg(c.id)}" class="w-14 h-14 rounded border border-gray-400 bg-black object-cover shadow-lg">`;
 
                         if (side === 'B') {
                             el.innerHTML += `
@@ -1600,21 +2308,33 @@
         // ==========================================
         // MATCH SIMULATOR
         // ==========================================
-        const match = {
+        window.match = {
             state: {
                 time: 0, interval: null, speed: 2, tactic: 'balance',
-                blue: { id: null, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: [] },
-                red: { id: null, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: [] }
+                nextDragonTime: 300, dragonAlive: false,
+                nextBaronTime: 1200, baronAlive: false,
+                nextElderTime: null, elderAlive: false,
+                blue: { id: null, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: [], stats: {} },
+                red: { id: null, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: [], stats: {} }
             },
 
             init() {
                 app.switchTab('match');
                 
                 this.state.time = 0;
-                this.state.blue = { id: draft.state.blueId, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: draft.state.bPicks };
-                this.state.red = { id: draft.state.redId, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: draft.state.rPicks };
+                this.state.nextDragonTime = 300; this.state.dragonAlive = false;
+                this.state.nextBaronTime = 1200; this.state.baronAlive = false;
+                this.state.nextElderTime = null; this.state.elderAlive = false;
+
+                this.state.blue = { id: draft.state.blueId, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: draft.state.bPicks, stats: {} };
+                this.state.red = { id: draft.state.redId, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: draft.state.rPicks, stats: {} };
                 this.state.tactic = state.activeSeries.tactic;
                 this.setSpeed(2);
+
+                window.DATA.roles.forEach(r => {
+                    this.state.blue.stats[r] = { k: 0, d: 0, a: 0, dmg: 0, cs: 0, id: this.state.blue.champs[r] };
+                    this.state.red.stats[r] = { k: 0, d: 0, a: 0, dmg: 0, cs: 0, id: this.state.red.champs[r] };
+                });
 
                 document.getElementById('log-set-num').innerText = state.activeSeries.set;
                 
@@ -1626,6 +2346,15 @@
                 document.getElementById('match-blue-logo').outerHTML = utils.getLogoHtml(tB.id, 'shrink-0 w-8 h-8 rounded bg-gray-900 border border-gray-600', 'match-blue-logo');
                 document.getElementById('match-red-logo').outerHTML = utils.getLogoHtml(tR.id, 'shrink-0 w-8 h-8 rounded bg-gray-900 border border-gray-600', 'match-red-logo');
                 
+                const reqWins = state.activeSeries.match.bo === 5 ? 3 : 2;
+                const renderPips = (score, elId) => {
+                    let h = '';
+                    for(let i=0; i<reqWins; i++) h += `<div class="pip ${i < score ? 'filled' : 'empty'}"></div>`;
+                    document.getElementById(elId).innerHTML = h;
+                };
+                renderPips(state.activeSeries.myScore, draft.state.playerIsBlue ? 'score-pips-blue' : 'score-pips-red');
+                renderPips(state.activeSeries.enScore, draft.state.playerIsBlue ? 'score-pips-red' : 'score-pips-blue');
+
                 document.getElementById('match-log').innerHTML = '';
                 document.getElementById('kill-log-left').innerHTML = '';
                 document.getElementById('kill-log-right').innerHTML = '';
@@ -1634,45 +2363,90 @@
                 document.getElementById('match-red-dragons').innerHTML = '';
                 
                 this.initMinimap();
+                this.initSidePanels();
                 this.log(`세트 ${state.activeSeries.set} - 소환사의 협곡에 오신 것을 환영합니다.`, 'sys');
                 this.startGameLoop();
             },
 
+            initSidePanels() {
+                const renderPanel = (teamId, picks, side) => {
+                    let html = '';
+                    window.DATA.roles.forEach(r => {
+                        const pList = window.DATA.players.filter(pl => pl.teamId === teamId && pl.role.includes(r));
+                        const p = pList.length > 0 ? pList[0] : { name: 'Player' };
+                        const c = utils.getChamp(picks[r]);
+                        
+                        html += `
+                            <div class="player-panel ${side==='R'?'player-panel-red':''} flex items-center p-2 rounded gap-3 h-16 w-full relative overflow-hidden" id="panel-${side}-${r}">
+                                <div class="absolute inset-0 bg-gradient-to-r ${side==='B'?'from-lck-blue/20':'from-lck-red/20'} to-transparent opacity-0 transition-opacity" id="hp-${side}-${r}"></div>
+                                ${side==='B' ? `<img src="${utils.getChampImg(c.id)}" class="ingame-portrait bg-black z-10 shrink-0">` : ''}
+                                <div class="flex-1 flex flex-col justify-center z-10 ${side==='R'?'items-end text-right':''}">
+                                    <div class="text-xs font-bold text-white truncate w-32">${p.name}</div>
+                                </div>
+                                ${side==='R' ? `<img src="${utils.getChampImg(c.id)}" class="ingame-portrait bg-black z-10 shrink-0">` : ''}
+                            </div>
+                        `;
+                    });
+                    return html;
+                };
+
+                document.getElementById('match-panel-blue').innerHTML = renderPanel(this.state.blue.id, this.state.blue.champs, 'B');
+                document.getElementById('match-panel-red').innerHTML = renderPanel(this.state.red.id, this.state.red.champs, 'R');
+            },
+
             initMinimap() {
                 const map = document.getElementById('minimap-container');
-                map.innerHTML = '<div class="absolute inset-0 bg-black/20 rounded-lg"></div>';
+                map.innerHTML = '<div class="absolute inset-0 bg-black/10 rounded-lg"></div>';
                 
-                // Blue Towers (Outer, Inner, Inhibitor) : 0~8 탑,미드,바텀 순
                 const bTowers = [ 
-                    {x: 10, y: 35, t:'outer'}, {x: 10, y: 55, t:'inner'}, {x: 12, y: 70, t:'inhib'}, // Top
-                    {x: 43, y: 50, t:'outer'}, {x: 35, y: 60, t:'inner'}, {x: 27, y: 70, t:'inhib'}, // Mid
-                    {x: 85, y: 92, t:'outer'}, {x: 65, y: 92, t:'inner'}, {x: 50, y: 92, t:'inhib'}, // Bot
-                    {x: 17, y: 78, t:'nexus', type:'inhib-icon'}, {x: 23, y: 84, t:'nexus', type:'inhib-icon'} // Nexus Towers (9, 10)
+                    // Top: Outer, Inner, Inhibitor
+                    {x: 12, y: 34, t:'outer'}, {x: 12, y: 50, t:'inner'}, {x: 12, y: 65, t:'inhib'}, 
+                    // Mid: Outer, Inner, Inhibitor
+                    {x: 43, y: 55, t:'outer'}, {x: 34, y: 65, t:'inner'}, {x: 25, y: 73, t:'inhib'}, 
+                    // Bot: Outer, Inner, Inhibitor
+                    {x: 74, y: 92, t:'outer'}, {x: 52, y: 92, t:'inner'}, {x: 32, y: 91, t:'inhib'}, 
+                    // Nexus Towers (Blue)
+                    {x: 14, y: 78, t:'nexus', type:'inhib-icon'}, {x: 19, y: 83, t:'nexus', type:'inhib-icon'}
                 ];
-                // Red Towers : 0~8 탑,미드,바텀 순
                 const rTowers = [
-                    {x: 15, y: 8, t:'outer'}, {x: 35, y: 8, t:'inner'}, {x: 50, y: 8, t:'inhib'}, // Top
-                    {x: 57, y: 50, t:'outer'}, {x: 65, y: 40, t:'inner'}, {x: 73, y: 30, t:'inhib'}, // Mid
-                    {x: 90, y: 65, t:'outer'}, {x: 90, y: 45, t:'inner'}, {x: 88, y: 30, t:'inhib'}, // Bot
-                    {x: 77, y: 16, t:'nexus', type:'inhib-icon'}, {x: 83, y: 22, t:'nexus', type:'inhib-icon'} // Nexus Towers (9, 10)
+                    // Top: Outer, Inner, Inhibitor
+                    {x: 27, y: 8, t:'outer'}, {x: 52, y: 11, t:'inner'}, {x: 65, y: 10, t:'inhib'}, 
+                    // Mid: Outer, Inner, Inhibitor
+                    {x: 60, y: 44, t:'outer'}, {x: 68, y: 35, t:'inner'}, {x: 76, y: 26, t:'inhib'}, 
+                    // Bot: Outer, Inner, Inhibitor
+                    {x: 93, y: 69, t:'outer'}, {x: 92, y: 46, t:'inner'}, {x: 93, y: 32, t:'inhib'}, 
+                    // Nexus Towers (Red)
+                    {x: 82, y: 19, t:'nexus', type:'inhib-icon'}, {x: 86, y: 23, t:'nexus', type:'inhib-icon'}
                 ];
                 
-                // Nexuses (11)
-                map.innerHTML += `<div class="minimap-tower nexus-icon blue" id="n-b" style="left:15%; top:85%;"></div>`;
-                map.innerHTML += `<div class="minimap-tower nexus-icon red" id="n-r" style="left:85%; top:15%;"></div>`;
+                map.innerHTML += `<div class="minimap-tower nexus-icon blue" id="n-b" style="left:11%; top:89%;"></div>`;
+                map.innerHTML += `<div class="minimap-tower nexus-icon red" id="n-r" style="left:88%; top:12%;"></div>`;
 
                 bTowers.forEach((pos, i) => { map.innerHTML += `<div class="minimap-tower ${pos.type || 'tower-icon'} blue" id="t-b-${i}" style="left:${pos.x}%; top:${pos.y}%;"></div>`; });
                 rTowers.forEach((pos, i) => { map.innerHTML += `<div class="minimap-tower ${pos.type || 'tower-icon'} red" id="t-r-${i}" style="left:${pos.x}%; top:${pos.y}%;"></div>`; });
             },
             
+            setTactic(tactic, btnEl) {
+                this.state.tactic = tactic;
+                state.activeSeries.tactic = tactic; 
+                document.querySelectorAll('.tactic-btn').forEach(b => {
+                    b.classList.remove('active', 'border-lck-accent', 'text-white', 'bg-gray-700');
+                    b.classList.add('border-transparent', 'text-gray-400', 'bg-gray-800');
+                });
+                if(btnEl) {
+                    btnEl.classList.remove('border-transparent', 'text-gray-400', 'bg-gray-800');
+                    btnEl.classList.add('active', 'border-lck-accent', 'text-white', 'bg-gray-700');
+                }
+            },
+
             setSpeed(multiplier) {
                 this.state.speed = multiplier;
                 document.querySelectorAll('.spd-btn').forEach(btn => {
-                    btn.classList.remove('active', 'border-lck-accent', 'text-lck-accent');
-                    btn.classList.add('border-transparent', 'text-gray-400');
+                    btn.classList.remove('active', 'bg-gray-200', 'text-black', 'border-none', 'shadow-[0_0_8px_rgba(255,255,255,0.5)]');
+                    btn.classList.add('bg-gray-800', 'text-gray-400');
                     if(btn.innerText.includes(multiplier)) {
-                        btn.classList.add('active', 'border-lck-accent', 'text-lck-accent');
-                        btn.classList.remove('border-transparent', 'text-gray-400');
+                        btn.classList.add('active', 'bg-gray-200', 'text-black', 'border-none', 'shadow-[0_0_8px_rgba(255,255,255,0.5)]');
+                        btn.classList.remove('bg-gray-800', 'text-gray-400');
                     }
                 });
                 this.startGameLoop();
@@ -1700,16 +2474,20 @@
                 const containerId = isBlueKiller ? 'kill-log-left' : 'kill-log-right';
                 const container = document.getElementById(containerId);
                 const el = document.createElement('div');
-                el.className = `kill-log-item`;
+                el.className = `kill-log-item ${isBlueKiller ? 'blue-kill' : 'red-kill'}`;
                 
-                el.innerHTML = `
-                    <img src="${utils.getChampImg(killerCid)}" class="w-8 h-8 border border-gray-500 rounded bg-black">
-                    <i class="fa-solid fa-khanda text-xs text-red-500"></i>
-                    <img src="${utils.getChampImg(victimCid)}" class="w-8 h-8 border border-gray-500 rounded grayscale bg-black">
-                `;
+                const killerImg = `<img src="${utils.getChampImg(killerCid)}" class="w-10 h-10 border border-gray-500 rounded bg-black">`;
+                const victimImg = `<img src="${utils.getChampImg(victimCid)}" class="w-10 h-10 border border-gray-500 rounded bg-black grayscale">`;
+                const icon = `<i class="fa-solid fa-khanda text-sm ${isBlueKiller ? 'text-blue-400' : 'text-red-400'}"></i>`;
+                
+                if (isBlueKiller) {
+                    el.innerHTML = `${killerImg} ${icon} ${victimImg}`;
+                } else {
+                    el.innerHTML = `${victimImg} ${icon} ${killerImg}`;
+                }
                 
                 container.prepend(el);
-                setTimeout(() => el.remove(), 4000); 
+                setTimeout(() => { if(el.parentNode) el.remove(); }, 3500); 
             },
 
             showAnnouncer(teamId, text, colorClass) {
@@ -1723,6 +2501,15 @@
                 container.appendChild(el);
                 setTimeout(() => { if(el.parentNode) el.remove(); }, 3000);
             },
+            
+            flashHpBar(side, role) {
+                const el = document.getElementById(`hp-${side}-${role}`);
+                if(el) {
+                    el.style.opacity = '1';
+                    el.style.backgroundColor = 'red';
+                    setTimeout(() => { el.style.opacity = '0'; el.style.backgroundColor = ''; }, 500);
+                }
+            },
 
             tick() {
                 this.state.time += 10; 
@@ -1731,105 +2518,183 @@
                 const isAggro = this.state.tactic === 'aggro';
                 const isObj = this.state.tactic === 'obj';
 
-                if (r < 0.05 && this.state.time >= 300 && this.state.time <= 840 && this.state.blue.grubs + this.state.red.grubs < 3) {
-                    const isBlueGet = Math.random() < (isObj ? 0.6 : 0.5);
-                    const winner = isBlueGet ? this.state.blue : this.state.red;
-                    const amount = Math.floor(Math.random() * 2) + 1; 
-                    winner.grubs = Math.min(3, winner.grubs + amount);
-                    winner.gold += amount * 100;
-                    this.log(`${isBlueGet?'블루':'레드'} 진영이 공허 유충 ${amount}마리를 처치했습니다.`, isBlueGet?'blue':'red');
-                    sfx.play('kill');
+                if (this.state.time >= this.state.nextDragonTime && !this.state.dragonAlive && !this.state.elderAlive && this.state.blue.dragons.length < 4 && this.state.red.dragons.length < 4) {
+                    this.state.dragonAlive = true;
+                    this.log("드래곤이 등장했습니다.", "sys");
                 }
-                else if (r < 0.15) { 
-                    const isBlueAtk = Math.random() < (isAggro ? 0.55 : 0.5);
+                if (this.state.time >= 1200 && this.state.time >= this.state.nextBaronTime && !this.state.baronAlive) {
+                    this.state.baronAlive = true;
+                    this.log("내셔 남작이 등장했습니다.", "sys");
+                }
+                if (this.state.nextElderTime && this.state.time >= this.state.nextElderTime && !this.state.elderAlive) {
+                    this.state.elderAlive = true;
+                    this.log("장로 드래곤이 등장했습니다.", "sys");
+                }
+
+                let bluePwr = window.DATA.roles.reduce((s, ro) => {
+                    const p = window.DATA.players.find(pl => pl.teamId === this.state.blue.id && pl.role.includes(ro));
+                    return s + (p ? p.tier : 1);
+                }, 0);
+                let redPwr = window.DATA.roles.reduce((s, ro) => {
+                    const p = window.DATA.players.find(pl => pl.teamId === this.state.red.id && pl.role.includes(ro));
+                    return s + (p ? p.tier : 1);
+                }, 0);
+                
+                const goldDiff = this.state.blue.gold - this.state.red.gold;
+                const objAdv = (this.state.blue.dragons.length - this.state.red.dragons.length) * 0.05 + 
+                               (this.state.blue.barons - this.state.red.barons) * 0.15;
+
+                let blueWinChance = 0.5 + ((bluePwr - redPwr) * 0.02) + (goldDiff / 1000 * 0.02) + objAdv;
+                
+                if (goldDiff > 5000) blueWinChance += 0.15;
+                if (goldDiff < -5000) blueWinChance -= 0.15;
+                
+                blueWinChance = Math.max(0.1, Math.min(0.9, blueWinChance));
+
+                if (Math.random() < 0.03) blueWinChance = blueWinChance > 0.5 ? 0.3 : 0.7;
+
+                if (this.state.time > 300 && r < 0.08 && (this.state.dragonAlive || this.state.baronAlive || this.state.elderAlive)) {
+                    const isBlueWin = Math.random() < blueWinChance + (isObj?0.15:-0.1);
+                    const winner = isBlueWin ? this.state.blue : this.state.red;
+                    const loser = isBlueWin ? this.state.red : this.state.blue;
+                    
+                    const deaths = Math.floor(Math.random()*3)+1;
+                    for(let i=0; i<deaths; i++) {
+                        winner.kills++; winner.gold += 300;
+                        const wRole = window.DATA.roles[Math.floor(Math.random()*5)];
+                        const lRole = window.DATA.roles[Math.floor(Math.random()*5)];
+                        winner.stats[wRole].k++; winner.stats[wRole].dmg += 1500;
+                        loser.stats[lRole].d++;
+                        
+                        const killer = winner.champs[wRole];
+                        const victim = loser.champs[lRole];
+                        setTimeout(() => this.showKillLog(killer, victim, isBlueWin), i * 300);
+                    }
+                    
+                    if(this.state.elderAlive) {
+                        winner.gold += 1000;
+                        this.state.elderAlive = false;
+                        this.state.nextElderTime = this.state.time + 360; 
+                        this.showAnnouncer(winner.id, '장로 드래곤 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
+                        this.log(`장로 드래곤 처치! ${isBlueWin?'블루':'레드'} 진영 버프 획득.`, isBlueWin?'blue':'red');
+                        sfx.play('kill');
+                    } else if (this.state.baronAlive) {
+                        winner.barons++; winner.gold += 1500;
+                        this.state.baronAlive = false;
+                        this.state.nextBaronTime = this.state.time + 360; 
+                        this.showAnnouncer(winner.id, '바론 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
+                        this.log(`바론 처치! ${isBlueWin?'블루':'레드'}.`, isBlueWin?'blue':'red');
+                        sfx.play('kill');
+                    } else if (this.state.dragonAlive) {
+                        const dColors = ['text-blue-400', 'text-red-500', 'text-yellow-700', 'text-teal-300', 'text-purple-400'];
+                        winner.dragons.push(dColors[Math.floor(Math.random()*dColors.length)]);
+                        winner.gold += 500;
+                        this.state.dragonAlive = false;
+                        
+                        if(winner.dragons.length === 4) {
+                            this.state.nextElderTime = this.state.time + 360; 
+                            this.log(`드래곤 처치! ${isBlueWin?'블루':'레드'} 진영 영혼 획득! 6분 뒤 장로 드래곤이 등장합니다.`, isBlueWin?'blue':'red');
+                        } else {
+                            this.state.nextDragonTime = this.state.time + 300; 
+                            this.log(`드래곤 처치! ${isBlueWin?'블루':'레드'} 진영 승리.`, isBlueWin?'blue':'red');
+                        }
+                        this.showAnnouncer(winner.id, '드래곤 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
+                        sfx.play('kill');
+                    }
+                }
+                else if (r < 0.14) { 
+                    const isBlueAtk = Math.random() < blueWinChance + (isAggro?0.1:-0.1);
                     const atkSide = isBlueAtk ? this.state.blue : this.state.red;
                     const defSide = isBlueAtk ? this.state.red : this.state.blue;
                     
-                    const atkChamps = Object.values(atkSide.champs);
-                    const defChamps = Object.values(defSide.champs);
-                    const killer = atkChamps[Math.floor(Math.random()*atkChamps.length)];
-                    const victim = defChamps[Math.floor(Math.random()*defChamps.length)];
+                    const atkRole = window.DATA.roles[Math.floor(Math.random()*5)];
+                    const defRole = window.DATA.roles[Math.floor(Math.random()*5)];
+                    const killer = atkSide.champs[atkRole];
+                    const victim = defSide.champs[defRole];
                     
                     atkSide.kills++; atkSide.gold += 300;
                     
-                    // 킬 로그 텍스트 포맷 변경: "KT Aiming의 킬!"
-                    const killerTeamId = atkSide.id;
-                    const killerTeamName = utils.getTeam(killerTeamId).id;
-                    const killerRole = Object.keys(atkSide.champs).find(k => atkSide.champs[k] === killer);
+                    atkSide.stats[atkRole].k++;
+                    atkSide.stats[atkRole].dmg += Math.floor(Math.random()*2000) + 500;
+                    defSide.stats[defRole].d++;
+                    this.flashHpBar(isBlueAtk ? 'R' : 'B', defRole);
+
+                    window.DATA.roles.forEach(r => {
+                        if(r !== atkRole && Math.random() < 0.5) { atkSide.stats[r].a++; atkSide.stats[r].dmg += Math.floor(Math.random()*1000); }
+                    });
                     
-                    let playerName = killerRole;
-                    const playerObj = DATA.players.find(p => p.teamId === killerTeamId && p.role === killerRole);
-                    if (playerObj) playerName = playerObj.name;
+                    const killerTeamName = utils.getTeam(atkSide.id).name;
+                    const playerObj = window.DATA.players.find(p => p.teamId === atkSide.id && p.role.includes(atkRole));
+                    const playerName = playerObj ? playerObj.name : atkRole;
 
                     this.showKillLog(killer, victim, isBlueAtk);
                     this.log(`${killerTeamName} ${playerName}의 킬!`, isBlueAtk?'blue':'red');
                     sfx.play('kill');
                 } 
-                else if (r < 0.22 && this.state.time > 400) { 
-                    const isBaron = this.state.time > 1200 && Math.random() < 0.3;
-                    const isBlueWin = Math.random() < (isObj ? 0.55 : 0.5);
-                    const winner = isBlueWin ? this.state.blue : this.state.red;
-                    const loser = isBlueWin ? this.state.red : this.state.blue;
+                else { 
+                    let basePushThreshold = 0.22;
+                    if (goldDiff >= 10000 || goldDiff <= -10000) basePushThreshold = 0.45; // 10k 이상 차이나면 포탑 철거 속도 가속
+                    else if (goldDiff >= 5000 || goldDiff <= -5000) basePushThreshold = 0.30;
                     
-                    const winChamps = Object.values(winner.champs);
-                    const loseChamps = Object.values(loser.champs);
-                    const deaths = Math.floor(Math.random()*3)+1;
-                    
-                    for(let i=0; i<deaths; i++) {
-                        winner.kills++; winner.gold += 300;
-                        const killer = winChamps[Math.floor(Math.random()*winChamps.length)];
-                        const victim = loseChamps[Math.floor(Math.random()*loseChamps.length)];
-                        setTimeout(() => this.showKillLog(killer, victim, isBlueWin), i * 300);
-                    }
-                    
-                    if(isBaron) {
-                        winner.barons++; winner.gold += 1500;
-                        this.showAnnouncer(winner.id, '바론 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
-                        this.log(`바론 스틸/처치! ${isBlueWin?'블루':'레드'}.`, isBlueWin?'blue':'red');
-                        sfx.play('kill');
-                    } else if (winner.dragons.length < 4) {
-                        const dColors = ['text-blue-400', 'text-red-500', 'text-yellow-700', 'text-teal-300', 'text-purple-400'];
-                        winner.dragons.push(dColors[Math.floor(Math.random()*dColors.length)]);
-                        winner.gold += 500;
-                        this.showAnnouncer(winner.id, '드래곤 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
-                        this.log(`드래곤 앞 한타! ${isBlueWin?'블루':'레드'} 진영 승리.`, isBlueWin?'blue':'red');
-                        sfx.play('kill');
-                    }
-                }
-                else if (r < 0.28 && this.state.time > 600) { 
-                    const isBluePush = Math.random() < 0.5;
-                    const atkSide = isBluePush ? this.state.blue : this.state.red;
-                    
-                    // 넥서스 파괴 로직 연동 (포탑 11개 -> 넥서스 파괴)
-                    if (atkSide.towers <= 11) { 
-                        if (atkSide.towers < 11) {
-                            const tEl = document.getElementById(`t-${isBluePush?'r':'b'}-${atkSide.towers}`);
-                            if(tEl) tEl.classList.add('destroyed');
+                    if (r < basePushThreshold && this.state.time > 480) { 
+                        let pushWinChance = blueWinChance;
+                        // 골드 격차가 클수록 유리한 팀이 억지 푸시를 당하지 않도록 억제
+                        if (goldDiff >= 10000) pushWinChance = 0.95; 
+                        else if (goldDiff <= -10000) pushWinChance = 0.05;
 
-                            atkSide.towers++; atkSide.gold += 600;
-                            this.log(`${isBluePush?'블루':'레드'} 진영이 포탑을 파괴했습니다!`, isBluePush?'blue':'red');
-                            sfx.play('tower');
-                        } else if (atkSide.towers === 11) {
-                            const nEl = document.getElementById(`n-${isBluePush?'r':'b'}`);
-                            if(nEl) nEl.classList.add('destroyed');
-                            
-                            this.log(`${isBluePush?'블루':'레드'} 진영이 넥서스를 파괴했습니다!`, isBluePush?'blue':'red');
-                            sfx.play('tower');
-                            this.endGame(isBluePush, '넥서스 파괴');
-                            return;
+                        const isBluePush = Math.random() < pushWinChance;
+                        const atkSide = isBluePush ? this.state.blue : this.state.red;
+                        
+                        if (atkSide.towers <= 11) { 
+                            if (atkSide.towers < 11) {
+                                const tEl = document.getElementById(`t-${isBluePush?'r':'b'}-${atkSide.towers}`);
+                                if(tEl) tEl.classList.add('destroyed');
+
+                                atkSide.towers++; atkSide.gold += 800;
+                                this.log(`${isBluePush?'블루':'레드'} 진영이 포탑을 파괴했습니다!`, isBluePush?'blue':'red');
+                                sfx.play('tower');
+                            } else if (atkSide.towers === 11) {
+                                const nEl = document.getElementById(`n-${isBluePush?'r':'b'}`);
+                                if(nEl) nEl.classList.add('destroyed');
+                                
+                                this.log(`${isBluePush?'블루':'레드'} 진영이 넥서스를 파괴했습니다!`, isBluePush?'blue':'red');
+                                sfx.play('tower');
+                                this.endGame(isBluePush, '넥서스 파괴');
+                                return;
+                            }
                         }
                     }
                 }
                 
-                this.state.blue.gold += 30; this.state.red.gold += 30;
+                this.state.blue.gold += 320 + (this.state.blue.dragons.length * 5); 
+                this.state.red.gold += 320 + (this.state.red.dragons.length * 5);
+                
+                window.DATA.roles.forEach(r => {
+                    this.state.blue.stats[r].cs += Math.floor(Math.random()*3);
+                    this.state.red.stats[r].cs += Math.floor(Math.random()*3);
+                });
+
                 this.updateUI();
 
+                if (this.state.time > 3600) { 
+                    this.endGame(blueWinChance > 0.5, '시간 초과 판정 승리');
+                }
             },
 
             endGame(isBlueWin, reason) {
                 clearInterval(this.state.interval);
                 this.showAnnouncer(isBlueWin ? this.state.blue.id : this.state.red.id, '경기 승리!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
                 this.log(`세트 종료! (${reason})`, 'sys');
+                
+                const resultObj = state.activeSeries.match.results.find(r => r.set === state.activeSeries.set);
+                if(resultObj) resultObj.winner = isBlueWin ? this.state.blue.id : this.state.red.id;
+
+                const winChamps = isBlueWin ? Object.values(this.state.blue.champs) : Object.values(this.state.red.champs);
+                winChamps.forEach(cId => {
+                    if(!state.champStats[cId]) state.champStats[cId] = {picks:0, bans:0, wins:0, totalGames:0};
+                    state.champStats[cId].wins++;
+                });
+
                 const isPlayerBlue = draft.state.playerIsBlue;
                 const playerWonSet = (isPlayerBlue && isBlueWin) || (!isPlayerBlue && !isBlueWin);
                 if(playerWonSet) sfx.play('win'); else sfx.play('lose');
@@ -1876,20 +2741,61 @@
                 document.getElementById('res-title').innerText = playerWonSet ? 'VICTORY' : 'DEFEAT';
                 document.getElementById('res-title').className = `text-5xl font-black mb-2 tracking-widest ${playerWonSet?'text-lck-blue':'text-lck-red'}`;
                 
+                const isHome = series.match.t1 === state.playerTeamId;
+                const blueSeriesScore = isHome && isPlayerBlue ? series.myScore : (isHome ? series.enScore : (!isHome && isPlayerBlue ? series.myScore : series.enScore));
+                const redSeriesScore = isHome && !isPlayerBlue ? series.myScore : (isHome ? series.enScore : (!isHome && !isPlayerBlue ? series.myScore : series.enScore));
+                
                 document.getElementById('res-blue-name').innerText = utils.getTeam(draft.state.blueId).name;
                 document.getElementById('res-red-name').innerText = utils.getTeam(draft.state.redId).name;
                 document.getElementById('res-blue-score').innerText = this.state.blue.kills;
                 document.getElementById('res-red-score').innerText = this.state.red.kills;
-                
-                const isHome = series.match.t1 === state.playerTeamId;
-                const blueSeriesScore = isHome && isPlayerBlue ? series.myScore : (isHome ? series.enScore : (!isHome && isPlayerBlue ? series.myScore : series.enScore));
-                const redSeriesScore = isHome && !isPlayerBlue ? series.myScore : (isHome ? series.enScore : (!isHome && !isPlayerBlue ? series.myScore : series.enScore));
                 
                 document.getElementById('res-series-score').innerHTML = `<span class="text-lck-blue">${blueSeriesScore}</span> : <span class="text-lck-red">${redSeriesScore}</span>`;
                 
                 const m = Math.floor(this.state.time/60).toString().padStart(2,'0');
                 const s = (this.state.time%60).toString().padStart(2,'0');
                 document.getElementById('res-time').innerText = `${m}:${s}`;
+
+                const tbody = document.getElementById('res-stats-body');
+                tbody.innerHTML = '';
+                
+                let maxDmg = 1;
+                window.DATA.roles.forEach(r => {
+                    if(this.state.blue.stats[r].dmg > maxDmg) maxDmg = this.state.blue.stats[r].dmg;
+                    if(this.state.red.stats[r].dmg > maxDmg) maxDmg = this.state.red.stats[r].dmg;
+                });
+
+                window.DATA.roles.forEach(r => {
+                    const bSt = this.state.blue.stats[r];
+                    const rSt = this.state.red.stats[r];
+                    const bC = utils.getChampImg(bSt.id);
+                    const rC = utils.getChampImg(rSt.id);
+                    const bW = (bSt.dmg / maxDmg) * 100;
+                    const rW = (rSt.dmg / maxDmg) * 100;
+
+                    tbody.innerHTML += `
+                        <tr class="border-b border-gray-800">
+                            <td class="p-2 text-left pl-4 flex items-center gap-2">
+                                <img src="${bC}" class="w-8 h-8 rounded border border-gray-600 bg-black">
+                                <span class="font-bold text-gray-300 w-8">${r}</span>
+                            </td>
+                            <td class="p-2 font-mono">${bSt.k}/${bSt.d}/${bSt.a}</td>
+                            <td class="p-2 border-r border-gray-700 relative">
+                                <div class="absolute left-2 top-2 bottom-2 bg-lck-blue/20 rounded z-0" style="width: ${bW}%"></div>
+                                <span class="relative z-10">${bSt.dmg.toLocaleString()}</span>
+                            </td>
+                            <td class="p-2 text-right pr-4 flex items-center justify-end gap-2">
+                                <span class="font-bold text-gray-300 w-8">${r}</span>
+                                <img src="${rC}" class="w-8 h-8 rounded border border-gray-600 bg-black">
+                            </td>
+                            <td class="p-2 font-mono">${rSt.k}/${rSt.d}/${rSt.a}</td>
+                            <td class="p-2 relative">
+                                <div class="absolute right-2 top-2 bottom-2 bg-lck-red/20 rounded z-0" style="width: ${rW}%"></div>
+                                <span class="relative z-10">${rSt.dmg.toLocaleString()}</span>
+                            </td>
+                        </tr>
+                    `;
+                });
                 
                 const winReq = series.match.bo === 5 ? 3 : 2;
                 const isSeriesOver = series.myScore === winReq || series.enScore === winReq;
@@ -1912,8 +2818,18 @@
                 
                 state.activeSeries.set++;
                 
-                // app.initDraft() 호출 시 밴픽 상태와 UI가 깨끗하게 리셋됨
-                app.initDraft();
+                const isPlayerWin = document.getElementById('res-title').innerText === 'VICTORY';
+                
+                if (isPlayerWin) {
+                    app.showSideSelectModal();
+                } else {
+                    const enemyId = state.activeSeries.match.t1 === state.playerTeamId ? state.activeSeries.match.t2 : state.activeSeries.match.t1;
+                    const aiPickBlue = Math.random() < 0.5;
+                    const blueId = aiPickBlue ? enemyId : state.playerTeamId;
+                    const redId = aiPickBlue ? state.playerTeamId : enemyId;
+                    app.initDraft(blueId, redId);
+                }
+                
                 sfx.play('click');
             }
         };
