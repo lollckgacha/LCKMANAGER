@@ -64,7 +64,6 @@
         .toast-hidden { opacity: 0; transform: translate(-50%, -20px); pointer-events: none; }
         .toast-visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
 
-        /* Drag and Drop UI components styling */
         .drop-zone { border: 2px dashed transparent; transition: all 0.2s; }
         .drop-zone.drag-over { border-color: #c89b3c; background-color: rgba(200, 155, 60, 0.1); }
         .player-card { cursor: grab; transition: transform 0.1s; }
@@ -2514,10 +2513,14 @@
                     }
                 } 
                 else { 
-                    let pushThres = 0.22;
-                    if (goldDiff >= 10000 || goldDiff <= -10000) pushThres = 0.45; else if (goldDiff >= 5000 || goldDiff <= -5000) pushThres = 0.30;
+                    // 최소 20분 보장을 위해 포탑 철거 확률 및 타이밍 조정
+                    let pushThres = 0.15; 
+                    if (this.state.time > 900) pushThres = 0.25; // 15분 이후
+                    if (goldDiff >= 10000 || goldDiff <= -10000) pushThres += 0.2; 
+                    else if (goldDiff >= 5000 || goldDiff <= -5000) pushThres += 0.1;
                     
-                    if (r < pushThres && this.state.time > 480) { 
+                    // 포탑 철거 시도 10분(600초) 이후부터 시작
+                    if (r < pushThres && this.state.time > 600) { 
                         let pushChance = blueWinChance;
                         if (goldDiff >= 10000) pushChance = 0.95; else if (goldDiff <= -10000) pushChance = 0.05;
 
@@ -2531,10 +2534,17 @@
                                 atkSide.towers++; atkSide.gold += 800;
                                 this.log(`포탑 파괴!`, isBluePush?'blue':'red'); sfx.play('tower');
                             } else if (atkSide.towers === 11) {
-                                const nEl = document.getElementById(`n-${isBluePush?'r':'b'}`);
-                                if(nEl) nEl.classList.add('destroyed');
-                                this.log(`넥서스 파괴!`, isBluePush?'blue':'red'); sfx.play('tower');
-                                this.endGame(isBluePush, '넥서스 파괴'); return;
+                                // 강제 20분 보장 로직 (1200초 이전 넥서스 파괴 불가)
+                                if (this.state.time < 1200) {
+                                    if (Math.random() < 0.15) {
+                                        this.log(`넥서스 공격! 하지만 상대의 결사 항전에 막혀 물러납니다.`, isBluePush?'blue':'red');
+                                    }
+                                } else {
+                                    const nEl = document.getElementById(`n-${isBluePush?'r':'b'}`);
+                                    if(nEl) nEl.classList.add('destroyed');
+                                    this.log(`넥서스 파괴!`, isBluePush?'blue':'red'); sfx.play('tower');
+                                    this.endGame(isBluePush, '넥서스 파괴'); return;
+                                }
                             }
                         }
                     }
