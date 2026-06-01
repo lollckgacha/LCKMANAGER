@@ -23,13 +23,49 @@
         }
     </script>
     <style>
-        body { background-color: #0a0a0c; color: #f0e6d2; overflow: hidden; user-select: none; }
+        /* 기본 바디 설정 (레터박스 역할) */
+        body { 
+            background-color: #000; 
+            color: #f0e6d2; 
+            margin: 0; 
+            padding: 0;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            width: 100vw; 
+            overflow: hidden; 
+            user-select: none; 
+        }
+
+        /* 16:9 강제 비율 앱 컨테이너 */
+        #app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 56.25vw; /* 16:9 비율 유지 (100vw * 9/16) */
+            background-color: #0a0a0c;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 와이드 모니터 대응 (세로 높이 기준 레터박스) */
+        @media (min-aspect-ratio: 16/9) {
+            #app-container {
+                max-width: 177.78vh; /* 16:9 비율 유지 (100vh * 16/9) */
+                max-height: 100vh;
+            }
+        }
+
         .selectable-text { user-select: text !important; cursor: text !important; pointer-events: auto; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1c1c1f; }
         ::-webkit-scrollbar-thumb { background: #c89b3c; border-radius: 3px; }
         
-        .screen { display: none; height: 100vh; width: 100vw; flex-direction: column; }
+        .screen { display: none; height: 100%; width: 100%; flex-direction: column; position: absolute; inset: 0; }
         .screen.active { display: flex; }
         .view-section { display: none; flex: 1; overflow-y: auto; padding: 1.5rem; }
         .view-section.active { display: flex; flex-direction: column; }
@@ -118,588 +154,495 @@
     </style>
 </head>
 <body>
+    <div id="app-container">
+        <!-- Toast UI -->
+        <div id="ui-toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-lg shadow-xl font-bold text-white text-center toast-hidden"></div>
 
-    <!-- Toast UI -->
-    <div id="ui-toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-lg shadow-xl font-bold text-white text-center toast-hidden"></div>
-
-    <!-- SCREEN 0: LOADING -->
-    <div id="screen-loading" class="screen active items-center justify-center bg-lck-dark relative">
-        <div class="absolute inset-0 bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-5 bg-cover"></div>
-        <div class="z-10 flex flex-col items-center gap-6">
-            <i class="fa-solid fa-spinner fa-spin text-6xl text-lck-accent mb-2"></i>
-            <h2 class="text-2xl font-black text-white tracking-widest uppercase">데이터 에셋 불러오는 중...</h2>
-            <div class="text-lck-accent font-bold text-3xl" id="loading-pct">0%</div>
-            <div class="w-80 h-2 bg-gray-800 rounded-full overflow-hidden shadow-inner">
-                <div id="loading-bar" class="h-full bg-gradient-to-r from-yellow-500 to-lck-accent w-0 transition-all duration-200"></div>
-            </div>
-            <div class="text-gray-500 text-sm mt-2">첫 접속 시 다소 시간이 걸릴 수 있습니다.</div>
-        </div>
-    </div>
-
-    <!-- Custom Match Confirm Modal -->
-    <div id="modal-match-confirm" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center backdrop-blur-sm transition-all duration-300">
-        <div class="bg-lck-panel border-2 border-lck-accent p-8 rounded-xl w-[450px] text-center shadow-[0_0_30px_rgba(200,155,60,0.3)] flex flex-col items-center">
-            <i class="fa-solid fa-trophy text-5xl text-lck-accent mb-4"></i>
-            <h3 class="text-3xl font-black text-white mb-2 tracking-widest">MATCH DAY</h3>
-            <p class="text-gray-300 mb-8 text-lg" id="modal-match-text">오늘 경기가 있습니다.<br>밴픽을 시작하시겠습니까?</p>
-            <div class="flex gap-4 justify-center w-full">
-                <button onclick="app.closeMatchModal()" class="flex-1 py-3 bg-gray-800 border border-gray-600 text-gray-400 font-bold rounded hover:bg-gray-700 hover:text-white transition">조금 더 준비하기</button>
-                <button onclick="app.confirmMatchModal()" class="flex-1 py-3 bg-lck-accent text-black font-bold rounded hover:bg-yellow-500 transition shadow-[0_0_15px_rgba(200,155,60,0.4)]">경기 시작</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Match Detail Modal -->
-    <div id="modal-match-detail" class="hidden fixed inset-0 bg-black/80 z-[200] flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-gray-900 border border-gray-600 rounded-xl w-[700px] max-h-[80vh] flex flex-col shadow-2xl">
-            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-xl">
-                <h3 class="text-xl font-bold text-white tracking-widest">경기 기록 상세</h3>
-                <button onclick="app.closeMatchDetailModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-6" id="match-detail-content">
-                <!-- Data injected here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Side Select Modal -->
-    <div id="modal-side-select" class="hidden fixed inset-0 bg-black/80 z-[200] flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-lck-panel border-2 border-white p-8 rounded-xl w-[500px] text-center shadow-2xl">
-            <h3 class="text-2xl font-black text-white mb-2 tracking-widest">진영 선택</h3>
-            <p class="text-gray-400 mb-8 text-sm" id="side-select-desc">다음 세트의 진영을 선택해주십시오.</p>
-            <div class="flex gap-6 justify-center w-full">
-                <button onclick="app.confirmSideSelect('B')" class="flex-1 py-6 bg-gray-800 border-2 border-lck-blue text-white font-bold rounded hover:bg-blue-900 transition flex flex-col items-center gap-2">
-                    <span class="text-2xl text-lck-blue">BLUE</span>
-                </button>
-                <button onclick="app.confirmSideSelect('R')" class="flex-1 py-6 bg-gray-800 border-2 border-lck-red text-white font-bold rounded hover:bg-red-900 transition flex flex-col items-center gap-2">
-                    <span class="text-2xl text-lck-red">RED</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCREEN 1: TITLE -->
-    <div id="screen-title" class="screen items-center justify-center bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-20 bg-cover relative">
-        <div class="absolute inset-0 bg-black/80"></div>
-        <div class="z-10 flex flex-col items-center gap-4 text-center">
-            <img src="logo.svg" onerror="this.style.display='none'" class="h-24 mb-2 drop-shadow-lg" alt="Logo">
-            <h1 class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-lck-accent to-yellow-200 tracking-tighter drop-shadow-lg">
-                LCK 매니저
-            </h1>
-            <p class="text-xl text-gray-400 tracking-widest mb-4">LEAVE YOUR MARK</p>
-            
-            <div class="flex flex-col gap-4 mt-8 w-80">
-                <button onclick="app.startNewGameSetup()" class="bg-lck-accent hover:bg-lck-accentHover text-lck-dark font-bold py-4 rounded-lg text-lg transition shadow-[0_0_15px_rgba(200,155,60,0.5)]">
-                    새로 시작
-                </button>
-                <button id="btn-continue" onclick="app.loadGame()" class="bg-lck-panel border border-gray-600 text-gray-400 font-bold py-4 rounded-lg text-lg transition hover:text-white hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                    이어 하기
-                </button>
-            </div>
-
-            <div class="w-full max-w-sm mt-6 bg-black p-4 rounded-xl border border-lck-accent text-left shadow-[0_0_15px_rgba(200,155,60,0.15)] selectable-text relative z-20">
-                <h3 class="font-extrabold text-lck-accent mb-2 text-sm border-b border-gray-800 pb-2 flex items-center gap-1.5">
-                    <i class="fa-solid fa-bullhorn"></i> 제작자 공지사항
-                </h3>
-                <ul class="list-disc pl-5 space-y-1.5 text-xs text-white font-medium leading-relaxed transition-colors">
-                    <li>데이터 최신화 요청, 버그 제보, 각종 피드백 및 아이디어 제공은 아래 이메일로 제보 부탁드립니다.</li>
-                    <li>각종 문의: <span class="text-lck-accent font-bold">lollckgacha@gmail.com</span></li>
-                </ul>
-            </div>
-            
-            <div class="mt-8 text-sm text-gray-500 selectable-text bg-black/50 px-4 py-2 rounded-full border border-gray-800 relative z-20">
-                
-            </div>
-        </div>
-    </div>
-
-    <!-- SCREEN 2: TEAM SELECTION -->
-    <div id="screen-team-select" class="screen bg-lck-dark">
-        <div class="p-8 h-full flex flex-col">
-            <h2 class="text-3xl font-bold text-white mb-2">팀 선택</h2>
-            <p class="text-gray-400 mb-8">감독으로 부임할 LCK 팀을 선택해주세요.</p>
-            
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-6 flex-1 overflow-y-auto content-start" id="team-grid">
-                <!-- Injected via JS -->
-            </div>
-            
-            <div class="mt-8 flex justify-end gap-4">
-                <button onclick="app.showScreen('title')" class="px-6 py-3 border border-gray-600 rounded text-gray-300 hover:bg-gray-800">뒤로가기</button>
-                <button id="btn-confirm-team" onclick="app.startNewGame()" class="px-8 py-3 bg-lck-accent text-black font-bold rounded hidden hover:bg-yellow-500 transition">이 팀으로 시작하기</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCREEN 3: MAIN WORKSPACE -->
-    <div id="screen-workspace" class="screen bg-lck-dark">
-        <!-- Top Bar -->
-        <header class="h-16 bg-lck-panel border-b border-gray-800 flex items-center justify-between px-6 z-10 shadow-md shrink-0">
-            <div class="flex items-center gap-4">
-                <div id="top-team-logo" class="shrink-0"></div>
-                <h1 class="text-xl font-bold text-white tracking-wide"><span id="top-team-name">T1</span> <span class="text-sm font-normal text-gray-400">Head Coach</span></h1>
-            </div>
-            <div class="flex items-center gap-6">
-                <!-- 사운드 토글 버튼 -->
-                <button onclick="sfx.toggle()" id="btn-sound-toggle" class="text-gray-400 hover:text-white px-3 transition">
-                    <i id="icon-sound" class="fa-solid fa-volume-xmark text-xl"></i>
-                </button>
-
-                <div class="text-right border-l border-gray-700 pl-6">
-                    <div class="text-xs text-gray-400" id="top-date">2026-01-14 (수)</div>
-                    <div class="text-sm font-bold text-lck-accent" id="top-next-event">다음 일정: VS GEN</div>
+        <!-- SCREEN 0: LOADING -->
+        <div id="screen-loading" class="screen active items-center justify-center bg-lck-dark relative">
+            <div class="absolute inset-0 bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-5 bg-cover"></div>
+            <div class="z-10 flex flex-col items-center gap-6">
+                <i class="fa-solid fa-spinner fa-spin text-6xl text-lck-accent mb-2"></i>
+                <h2 class="text-2xl font-black text-white tracking-widest uppercase">데이터 에셋 불러오는 중...</h2>
+                <div class="text-lck-accent font-bold text-3xl" id="loading-pct">0%</div>
+                <div class="w-80 h-2 bg-gray-800 rounded-full overflow-hidden shadow-inner">
+                    <div id="loading-bar" class="h-full bg-gradient-to-r from-yellow-500 to-lck-accent w-0 transition-all duration-200"></div>
                 </div>
-                <button onclick="app.advanceTime()" id="btn-advance-time" class="bg-lck-accent hover:bg-yellow-500 text-black px-6 py-2 rounded font-bold transition flex items-center gap-2">
-                    계속 진행 <i class="fa-solid fa-forward-step"></i>
-                </button>
+                <div class="text-gray-500 text-sm mt-2">첫 접속 시 다소 시간이 걸릴 수 있습니다.</div>
             </div>
-        </header>
+        </div>
 
-        <div class="flex flex-1 overflow-hidden">
-            <!-- Sidebar Navigation -->
-            <aside id="main-sidebar" class="w-64 bg-lck-panel border-r border-gray-800 flex flex-col p-4 gap-2 shrink-0 transition-all duration-300">
-                <button onclick="app.switchTab('dashboard')" class="nav-btn active flex items-center gap-3 p-3 rounded bg-gray-800 text-white font-medium transition text-left">
-                    <i class="fa-solid fa-house w-5 text-center"></i> 홈 (대시보드)
-                </button>
-                <button onclick="app.switchTab('roster')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
-                    <i class="fa-solid fa-users w-5 text-center"></i> 로스터 관리
-                </button>
-                <button onclick="app.switchTab('schedule')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
-                    <i class="fa-regular fa-calendar-days w-5 text-center"></i> 경기 일정
-                </button>
-                <button onclick="app.switchTab('standings')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
-                    <i class="fa-solid fa-list-ol w-5 text-center"></i> 리그 순위
-                </button>
-                <button onclick="app.switchTab('champstats')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
-                    <i class="fa-solid fa-chart-simple w-5 text-center"></i> 챔피언 통계
-                </button>
-                
-                <div class="mt-auto pt-4 border-t border-gray-800 flex flex-col gap-2 relative z-20">
-                    <button onclick="app.saveGame()" class="flex items-center gap-3 p-3 rounded text-gray-400 hover:text-lck-accent transition text-left">
-                        <i class="fa-regular fa-floppy-disk w-5 text-center"></i> 게임 저장하기
+        <!-- Custom Match Confirm Modal -->
+        <div id="modal-match-confirm" class="hidden absolute inset-0 bg-black/60 z-[200] flex items-center justify-center backdrop-blur-sm transition-all duration-300">
+            <div class="bg-lck-panel border-2 border-lck-accent p-8 rounded-xl w-[450px] text-center shadow-[0_0_30px_rgba(200,155,60,0.3)] flex flex-col items-center">
+                <i class="fa-solid fa-trophy text-5xl text-lck-accent mb-4"></i>
+                <h3 class="text-3xl font-black text-white mb-2 tracking-widest">MATCH DAY</h3>
+                <p class="text-gray-300 mb-8 text-lg" id="modal-match-text">오늘 경기가 있습니다.<br>밴픽을 시작하시겠습니까?</p>
+                <div class="flex gap-4 justify-center w-full">
+                    <button onclick="app.closeMatchModal()" class="flex-1 py-3 bg-gray-800 border border-gray-600 text-gray-400 font-bold rounded hover:bg-gray-700 hover:text-white transition">조금 더 준비하기</button>
+                    <button onclick="app.confirmMatchModal()" class="flex-1 py-3 bg-lck-accent text-black font-bold rounded hover:bg-yellow-500 transition shadow-[0_0_15px_rgba(200,155,60,0.4)]">경기 시작</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Match Detail Modal -->
+        <div id="modal-match-detail" class="hidden absolute inset-0 bg-black/80 z-[200] flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-gray-900 border border-gray-600 rounded-xl w-[700px] max-h-[80vh] flex flex-col shadow-2xl">
+                <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-xl">
+                    <h3 class="text-xl font-bold text-white tracking-widest">경기 기록 상세</h3>
+                    <button onclick="app.closeMatchDetailModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-6" id="match-detail-content">
+                    <!-- Data injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Side Select Modal -->
+        <div id="modal-side-select" class="hidden absolute inset-0 bg-black/80 z-[200] flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-lck-panel border-2 border-white p-8 rounded-xl w-[500px] text-center shadow-2xl">
+                <h3 class="text-2xl font-black text-white mb-2 tracking-widest">진영 선택</h3>
+                <p class="text-gray-400 mb-8 text-sm" id="side-select-desc">다음 세트의 진영을 선택해주십시오.</p>
+                <div class="flex gap-6 justify-center w-full">
+                    <button onclick="app.confirmSideSelect('B')" class="flex-1 py-6 bg-gray-800 border-2 border-lck-blue text-white font-bold rounded hover:bg-blue-900 transition flex flex-col items-center gap-2">
+                        <span class="text-2xl text-lck-blue">BLUE</span>
                     </button>
-                    <div class="text-[11px] text-gray-500 mt-2 text-center selectable-text bg-black/40 py-1.5 rounded">문의: lollckgacha@gmail.com</div>
+                    <button onclick="app.confirmSideSelect('R')" class="flex-1 py-6 bg-gray-800 border-2 border-lck-red text-white font-bold rounded hover:bg-red-900 transition flex flex-col items-center gap-2">
+                        <span class="text-2xl text-lck-red">RED</span>
+                    </button>
                 </div>
-            </aside>
+            </div>
+        </div>
 
-            <!-- Main Content Area -->
-            <main class="flex-1 bg-[#0a0a0c] overflow-hidden flex flex-col relative" id="main-content">
+        <!-- SCREEN 1: TITLE -->
+        <div id="screen-title" class="screen items-center justify-center bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-20 bg-cover relative">
+            <div class="absolute inset-0 bg-black/80"></div>
+            <div class="z-10 flex flex-col items-center gap-4 text-center">
+                <h1 class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-lck-accent to-yellow-200 tracking-tighter drop-shadow-lg">
+                    LCK 매니저
+                </h1>
+                <p class="text-xl text-gray-400 tracking-widest mb-4">LEAVE YOUR MARK</p>
                 
-                <!-- Tab: Dashboard -->
-                <section id="view-dashboard" class="view-section active gap-6">
-                    <div class="grid grid-cols-3 gap-6 h-full">
-                        <!-- News Feed -->
-                        <div class="col-span-2 bg-lck-panel border border-gray-800 rounded-lg p-5 flex flex-col">
-                            <h3 class="text-lg font-bold text-white border-b border-gray-700 pb-2 mb-4 flex justify-between">
-                                <span><i class="fa-regular fa-newspaper mr-2 text-lck-accent"></i>LCK 뉴스</span>
-                            </h3>
-                            <div id="news-feed" class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3">
-                                <!-- News items injected -->
-                            </div>
-                        </div>
-                        
-                        <div class="flex flex-col gap-6">
-                            <!-- Next Match -->
-                            <div class="bg-lck-panel border border-gray-800 rounded-lg p-5">
-                                <h3 class="text-sm text-gray-400 mb-2">다음 경기 정보</h3>
-                                <div class="flex justify-between items-center mb-4">
-                                    <div class="text-center w-16">
-                                        <div id="dash-my-logo" class="mx-auto mb-1 shrink-0"></div>
-                                        <div class="text-xs font-bold mt-1" id="dash-my-name">T1</div>
-                                    </div>
-                                    <div class="font-black text-xl text-gray-600">VS</div>
-                                    <div class="text-center w-16">
-                                        <div id="dash-enemy-logo" class="mx-auto mb-1 shrink-0"></div>
-                                        <div class="text-xs font-bold mt-1" id="dash-enemy-name">GEN</div>
-                                    </div>
-                                </div>
-                                <button id="btn-start-match-dash" onclick="app.confirmMatchModal()" class="w-full bg-lck-accent text-black font-bold py-2 rounded hidden hover:bg-yellow-500">경기 시작 (밴픽)</button>
-                                <div id="msg-wait-match" class="text-center text-sm text-gray-500 hidden">일정을 진행해주세요.</div>
+                <div class="flex flex-col gap-4 mt-8 w-80">
+                    <button onclick="app.startNewGameSetup()" class="bg-lck-accent hover:bg-lck-accentHover text-lck-dark font-bold py-4 rounded-lg text-lg transition shadow-[0_0_15px_rgba(200,155,60,0.5)]">
+                        새로 시작
+                    </button>
+                    <button id="btn-continue" onclick="app.loadGame()" class="bg-lck-panel border border-gray-600 text-gray-400 font-bold py-4 rounded-lg text-lg transition hover:text-white hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        이어 하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: TEAM SELECTION -->
+        <div id="screen-team-select" class="screen bg-lck-dark">
+            <div class="p-8 h-full flex flex-col">
+                <h2 class="text-3xl font-bold text-white mb-2">팀 선택</h2>
+                <p class="text-gray-400 mb-8">감독으로 부임할 LCK 팀을 선택해주세요.</p>
+                
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-6 flex-1 overflow-y-auto content-start" id="team-grid">
+                    <!-- Injected via JS -->
+                </div>
+                
+                <div class="mt-8 flex justify-end gap-4">
+                    <button onclick="app.showScreen('title')" class="px-6 py-3 border border-gray-600 rounded text-gray-300 hover:bg-gray-800">뒤로가기</button>
+                    <button id="btn-confirm-team" onclick="app.startNewGame()" class="px-8 py-3 bg-lck-accent text-black font-bold rounded hidden hover:bg-yellow-500 transition">이 팀으로 시작하기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: MAIN WORKSPACE -->
+        <div id="screen-workspace" class="screen bg-lck-dark">
+            <!-- Top Bar -->
+            <header class="h-16 bg-lck-panel border-b border-gray-800 flex items-center justify-between px-6 z-10 shadow-md shrink-0">
+                <div class="flex items-center gap-4">
+                    <div id="top-team-logo" class="shrink-0"></div>
+                    <h1 class="text-xl font-bold text-white tracking-wide"><span id="top-team-name">T1</span> <span class="text-sm font-normal text-gray-400">Head Coach</span></h1>
+                </div>
+                <div class="flex items-center gap-6">
+                    <button onclick="sfx.toggle()" id="btn-sound-toggle" class="text-gray-400 hover:text-white px-3 transition">
+                        <i id="icon-sound" class="fa-solid fa-volume-xmark text-xl"></i>
+                    </button>
+
+                    <div class="text-right border-l border-gray-700 pl-6">
+                        <div class="text-xs text-gray-400" id="top-date">2026-01-14 (수)</div>
+                        <div class="text-sm font-bold text-lck-accent" id="top-next-event">다음 일정: VS GEN</div>
+                    </div>
+                    <button onclick="app.advanceTime()" id="btn-advance-time" class="bg-lck-accent hover:bg-yellow-500 text-black px-6 py-2 rounded font-bold transition flex items-center gap-2">
+                        계속 진행 <i class="fa-solid fa-forward-step"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex flex-1 overflow-hidden">
+                <!-- Sidebar Navigation -->
+                <aside id="main-sidebar" class="w-64 bg-lck-panel border-r border-gray-800 flex flex-col p-4 gap-2 shrink-0 transition-all duration-300">
+                    <button onclick="app.switchTab('dashboard')" class="nav-btn active flex items-center gap-3 p-3 rounded bg-gray-800 text-white font-medium transition text-left">
+                        <i class="fa-solid fa-house w-5 text-center"></i> 홈 (대시보드)
+                    </button>
+                    <button onclick="app.switchTab('roster')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
+                        <i class="fa-solid fa-users w-5 text-center"></i> 로스터 관리
+                    </button>
+                    <button onclick="app.switchTab('schedule')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
+                        <i class="fa-regular fa-calendar-days w-5 text-center"></i> 경기 일정
+                    </button>
+                    <button onclick="app.switchTab('standings')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
+                        <i class="fa-solid fa-list-ol w-5 text-center"></i> 리그 순위
+                    </button>
+                    <button onclick="app.switchTab('champstats')" class="nav-btn flex items-center gap-3 p-3 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition text-left">
+                        <i class="fa-solid fa-chart-simple w-5 text-center"></i> 챔피언 통계
+                    </button>
+                    
+                    <div class="mt-auto pt-4 border-t border-gray-800 flex flex-col gap-2 relative z-20">
+                        <button onclick="app.saveGame()" class="flex items-center gap-3 p-3 rounded text-gray-400 hover:text-lck-accent transition text-left">
+                            <i class="fa-regular fa-floppy-disk w-5 text-center"></i> 게임 저장하기
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- Main Content Area -->
+                <main class="flex-1 bg-[#0a0a0c] overflow-hidden flex flex-col relative" id="main-content">
+                    
+                    <!-- Tab: Dashboard -->
+                    <section id="view-dashboard" class="view-section active gap-6">
+                        <div class="grid grid-cols-3 gap-6 h-full">
+                            <!-- News Feed -->
+                            <div class="col-span-2 bg-lck-panel border border-gray-800 rounded-lg p-5 flex flex-col">
+                                <h3 class="text-lg font-bold text-white border-b border-gray-700 pb-2 mb-4 flex justify-between">
+                                    <span><i class="fa-regular fa-newspaper mr-2 text-lck-accent"></i>LCK 뉴스</span>
+                                </h3>
+                                <div id="news-feed" class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3"></div>
                             </div>
                             
-                            <!-- Mini Standings -->
-                            <div class="bg-lck-panel border border-gray-800 rounded-lg p-5 flex-1 flex flex-col">
-                                <h3 class="text-sm font-bold text-white border-b border-gray-700 pb-2 mb-2">시즌 성적 요약</h3>
-                                <div id="dash-standings" class="flex-1 flex flex-col gap-2 text-sm overflow-y-auto pr-2">
-                                    <!-- Standings injected -->
+                            <div class="flex flex-col gap-6">
+                                <!-- Next Match -->
+                                <div class="bg-lck-panel border border-gray-800 rounded-lg p-5">
+                                    <h3 class="text-sm text-gray-400 mb-2">다음 경기 정보</h3>
+                                    <div class="flex justify-between items-center mb-4">
+                                        <div class="text-center w-16">
+                                            <div id="dash-my-logo" class="mx-auto mb-1 shrink-0"></div>
+                                            <div class="text-xs font-bold mt-1" id="dash-my-name">T1</div>
+                                        </div>
+                                        <div class="font-black text-xl text-gray-600">VS</div>
+                                        <div class="text-center w-16">
+                                            <div id="dash-enemy-logo" class="mx-auto mb-1 shrink-0"></div>
+                                            <div class="text-xs font-bold mt-1" id="dash-enemy-name">GEN</div>
+                                        </div>
+                                    </div>
+                                    <button id="btn-start-match-dash" onclick="app.confirmMatchModal()" class="w-full bg-lck-accent text-black font-bold py-2 rounded hidden hover:bg-yellow-500">경기 시작 (밴픽)</button>
+                                    <div id="msg-wait-match" class="text-center text-sm text-gray-500 hidden">일정을 진행해주세요.</div>
+                                </div>
+                                
+                                <!-- Mini Standings -->
+                                <div class="bg-lck-panel border border-gray-800 rounded-lg p-5 flex-1 flex flex-col">
+                                    <h3 class="text-sm font-bold text-white border-b border-gray-700 pb-2 mb-2">시즌 성적 요약</h3>
+                                    <div id="dash-standings" class="flex-1 flex flex-col gap-2 text-sm overflow-y-auto pr-2"></div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
 
-                <!-- Tab: Roster -->
-                <section id="view-roster" class="view-section flex-col gap-6">
-                    <div>
-                        <h2 class="text-2xl font-bold text-white">선발 로스터</h2>
-                        <p class="text-sm text-gray-400">라인별로 출전할 5명을 드래그 앤 드롭으로 배치하세요.</p>
-                    </div>
-                    
-                    <!-- Starters -->
-                    <div class="grid grid-cols-5 gap-4" id="roster-starters">
-                        <!-- Drops zones generated by JS -->
-                    </div>
-
-                    <div class="mt-4 pt-4 border-t border-gray-800 flex-1 overflow-y-auto">
-                        <h2 class="text-xl font-bold text-white mb-4">2군 로스터</h2>
-                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="roster-subs">
-                            <!-- Sub players injected -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Tab: Schedule -->
-                <section id="view-schedule" class="view-section">
-                    <div class="flex justify-between items-end mb-6">
+                    <!-- Tab: Roster -->
+                    <section id="view-roster" class="view-section flex-col gap-6">
                         <div>
-                            <h2 class="text-2xl font-bold text-white mb-2">경기 일정</h2>
-                            <p class="text-sm text-gray-400" id="schedule-phase-info">현재 진행: R1</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-lck-panel rounded-lg border border-gray-800 flex-1 flex flex-col p-4">
-                        <div class="flex justify-between items-center mb-4">
-                            <button onclick="app.changeMonth(-1)" class="p-2 hover:text-lck-accent text-gray-400"><i class="fa-solid fa-chevron-left"></i></button>
-                            <h3 class="text-xl font-bold text-white tracking-widest" id="cal-month-title">2026.01</h3>
-                            <button onclick="app.changeMonth(1)" class="p-2 hover:text-lck-accent text-gray-400"><i class="fa-solid fa-chevron-right"></i></button>
+                            <h2 class="text-2xl font-bold text-white">선발 로스터</h2>
+                            <p class="text-sm text-gray-400">라인별로 출전할 5명을 드래그 앤 드롭으로 배치하세요.</p>
                         </div>
                         
-                        <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-gray-500 mb-2">
-                            <div class="text-red-500">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-500">토</div>
-                        </div>
-                        <div id="calendar-grid" class="grid grid-cols-7 gap-2 flex-1 auto-rows-fr text-sm overflow-y-auto">
-                            <!-- Calendar generated by JS -->
-                        </div>
-                    </div>
-                </section>
+                        <div class="grid grid-cols-5 gap-4" id="roster-starters"></div>
 
-                <!-- Tab: Standings -->
-                <section id="view-standings" class="view-section gap-6">
-                    <div>
-                        <h2 class="text-2xl font-bold text-white mb-2">LCK 리그 순위</h2>
-                    </div>
-                    <div class="bg-lck-panel rounded-lg border border-gray-800 max-w-4xl shrink-0 flex-1 overflow-y-auto">
-                        <table class="w-full text-center border-collapse">
-                            <thead>
-                                <tr class="bg-gray-800 text-gray-400 text-sm border-b border-gray-700">
-                                    <th class="p-3 font-medium">순위</th>
-                                    <th class="p-3 font-medium text-left">팀</th>
-                                    <th class="p-3 font-medium">승</th>
-                                    <th class="p-3 font-medium">패</th>
-                                    <th class="p-3 font-medium">득실차</th>
-                                </tr>
-                            </thead>
-                            <tbody id="standings-list" class="text-sm">
-                                <!-- Generated by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-                
-                <!-- Tab: Champ Stats -->
-                <section id="view-champstats" class="view-section gap-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-2xl font-bold text-white">챔피언 통계</h2>
-                        <div class="flex gap-1" id="stat-role-filters">
-                            <button onclick="app.filterChampStats('ALL')" class="stat-role-btn active px-4 py-1.5 rounded bg-gray-700 text-white text-sm font-bold transition">ALL</button>
-                            <button onclick="app.filterChampStats('TOP')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">TOP</button>
-                            <button onclick="app.filterChampStats('JUG')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">JUG</button>
-                            <button onclick="app.filterChampStats('MID')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">MID</button>
-                            <button onclick="app.filterChampStats('BOT')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">BOT</button>
-                            <button onclick="app.filterChampStats('SUP')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">SUP</button>
+                        <div class="mt-4 pt-4 border-t border-gray-800 flex-1 overflow-y-auto">
+                            <h2 class="text-xl font-bold text-white mb-4">2군 로스터</h2>
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="roster-subs"></div>
                         </div>
-                    </div>
-                    
-                    <div class="bg-gray-900 border border-gray-700 rounded-lg flex-1 overflow-hidden flex flex-col">
-                        <!-- table-layout: fixed를 활용한 정확한 정렬 맞춤 -->
-                        <table class="w-full text-center border-collapse table-fixed">
-                            <thead>
-                                <tr class="bg-gray-800 text-gray-400 text-xs border-b border-gray-700 select-none">
-                                    <th class="p-2 font-medium text-left pl-6 w-[40%]">챔피언</th>
-                                    <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('pick')">픽률 <i id="sort-icon-pick" class="fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]"></i></th>
-                                    <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('ban')">밴률 <i id="sort-icon-ban" class="fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]"></i></th>
-                                    <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('bp')">밴픽률 <i id="sort-icon-bp" class="fa-solid fa-sort-down sort-icon text-lck-accent ml-1 text-[10px]"></i></th>
-                                    <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('win')">승률 <i id="sort-icon-win" class="fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]"></i></th>
-                                </tr>
-                            </thead>
-                        </table>
-                        <div class="overflow-y-auto flex-1">
-                            <table class="w-full text-center border-collapse table-fixed">
-                                <tbody id="champ-stats-list" class="text-sm text-gray-300">
-                                    <!-- Injected by JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
+                    </section>
 
-                <!-- Tab: Draft (Match Preparation) -->
-                <section id="view-draft" class="view-section p-0 h-full bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-5 relative">
-                    <div class="absolute inset-0 bg-black/90 z-0"></div>
-                    
-                    <!-- BP Animation Overlay -->
-                    <div id="bp-anim-overlay" class="fixed inset-0 z-[100] flex items-center justify-center">
-                        <div id="bp-anim-card" class="relative w-48 h-48 sm:w-64 sm:h-64 shadow-2xl flex items-center justify-center border-4 border-transparent rounded-lg overflow-hidden bg-black">
-                            <img id="bp-anim-img" class="w-full h-full object-cover rounded-lg">
-                            <div id="bp-anim-slash" class="absolute bg-red-600 h-4 shadow-[0_0_20px_red] hidden" style="width: 150%; left: -25%; top: 48%; transform: rotate(-45deg);"></div>
-                        </div>
-                    </div>
-
-                    <div class="z-10 flex flex-col h-full p-4 gap-4">
-                        <!-- Scoreboard Header -->
-                        <div class="flex justify-between items-center bg-black/50 border border-gray-800 p-3 rounded shrink-0">
-                            <div class="w-1/3 flex items-center gap-3">
-                                <div id="draft-blue-logo" class="shrink-0"></div>
-                                <div>
-                                    <h3 class="font-bold text-lck-blue text-lg" id="draft-blue-name">BLUE</h3>
-                                    <div class="text-xs text-gray-400">블루 진영</div>
-                                </div>
-                            </div>
-                            <div class="w-1/3 text-center flex flex-col justify-center items-center">
-                                <div id="draft-status" class="inline-block px-6 py-2 bg-gray-800 text-white font-bold rounded-full text-lg border border-gray-600">
-                                    준비 중...
-                                </div>
-                            </div>
-                            <div class="w-1/3 flex items-center justify-end gap-3 text-right">
-                                <div>
-                                    <h3 class="font-bold text-lck-red text-lg" id="draft-red-name">RED</h3>
-                                    <div class="text-xs text-gray-400">레드 진영</div>
-                                </div>
-                                <div id="draft-red-logo" class="shrink-0"></div>
+                    <!-- Tab: Schedule -->
+                    <section id="view-schedule" class="view-section">
+                        <div class="flex justify-between items-end mb-6">
+                            <div>
+                                <h2 class="text-2xl font-bold text-white mb-2">경기 일정</h2>
+                                <p class="text-sm text-gray-400" id="schedule-phase-info">현재 진행: R1</p>
                             </div>
                         </div>
-
-                        <!-- Draft Main Area -->
-                        <div class="flex-1 flex gap-4 overflow-hidden">
-                            <!-- Blue Side -->
-                            <div class="w-64 flex flex-col gap-2 h-full">
-                                <div class="bg-gray-900/80 border border-lck-blue/30 rounded p-2 grid grid-cols-3 gap-1 h-24 content-start shrink-0" id="draft-blue-bans"></div>
-                                <div class="bg-gray-900/80 border border-lck-blue/30 rounded p-2 flex-1 flex flex-col gap-2 overflow-y-auto" id="draft-blue-picks"></div>
+                        <div class="bg-lck-panel rounded-lg border border-gray-800 flex-1 flex flex-col p-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <button onclick="app.changeMonth(-1)" class="p-2 hover:text-lck-accent text-gray-400"><i class="fa-solid fa-chevron-left"></i></button>
+                                <h3 class="text-xl font-bold text-white tracking-widest" id="cal-month-title">2026.01</h3>
+                                <button onclick="app.changeMonth(1)" class="p-2 hover:text-lck-accent text-gray-400"><i class="fa-solid fa-chevron-right"></i></button>
                             </div>
-
-                            <!-- Center: Pool & Tiers -->
-                            <div class="flex-1 bg-lck-panel/80 border border-gray-800 rounded p-4 flex flex-col gap-3">
-                                <!-- Role Filter & Search -->
-                                <div class="flex justify-between items-center bg-gray-900 p-2 rounded gap-2 shrink-0">
-                                    <div class="flex gap-2 shrink-0" id="draft-role-filters">
-                                        <button onclick="draft.filter('ALL'); sfx.play('click');" class="role-filter active text-white font-bold px-3 py-1.5 rounded bg-gray-700 text-sm">ALL</button>
-                                        <button onclick="draft.filter('TOP'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">TOP</button>
-                                        <button onclick="draft.filter('JUG'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">JUG</button>
-                                        <button onclick="draft.filter('MID'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">MID</button>
-                                        <button onclick="draft.filter('BOT'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">BOT</button>
-                                        <button onclick="draft.filter('SUP'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">SUP</button>
-                                    </div>
-                                    <div class="relative flex-1 max-w-[200px]">
-                                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
-                                        <input type="text" id="draft-search-input" oninput="draft.onSearch(this.value)" placeholder="챔피언 검색..." class="w-full bg-gray-800 text-white text-xs px-8 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-lck-accent placeholder-gray-500">
-                                    </div>
-                                </div>
-
-                                <!-- Champion Grid -->
-                                <div class="flex-1 overflow-y-auto grid grid-cols-5 md:grid-cols-7 lg:grid-cols-8 gap-2 content-start pr-2" id="draft-pool">
-                                    <!-- Injected -->
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="h-auto flex flex-col justify-center items-center gap-2 border-t border-gray-700 pt-3 min-h-[60px] shrink-0">
-                                    <div id="draft-role-select" class="hidden flex gap-2 mb-1">
-                                        <button onclick="draft.selectRole('TOP'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">TOP</button>
-                                        <button onclick="draft.selectRole('JUG'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">JUG</button>
-                                        <button onclick="draft.selectRole('MID'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">MID</button>
-                                        <button onclick="draft.selectRole('BOT'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">BOT</button>
-                                        <button onclick="draft.selectRole('SUP'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">SUP</button>
-                                    </div>
-                                    <div class="flex gap-4 w-full justify-center">
-                                        <button id="btn-draft-ban" onclick="draft.confirmAction()" class="hidden bg-red-600 text-white font-bold py-2 px-10 rounded w-48 hover:bg-red-500">밴 (BAN)</button>
-                                        <button id="btn-draft-pick" onclick="draft.confirmAction()" class="hidden bg-blue-600 text-white font-bold py-2 px-10 rounded w-48 hover:bg-blue-500">픽 (PICK)</button>
-                                        <button id="btn-draft-start" onclick="match.init()" class="hidden bg-lck-accent text-black font-bold py-2 px-10 rounded w-64 hover:bg-yellow-500 shadow-[0_0_10px_#c89b3c]">인게임 진입</button>
-                                    </div>
-                                </div>
+                            <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-gray-500 mb-2">
+                                <div class="text-red-500">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-500">토</div>
                             </div>
-
-                            <!-- Red Side -->
-                            <div class="w-64 flex flex-col gap-2 h-full">
-                                <div class="bg-gray-900/80 border border-lck-red/30 rounded p-2 grid grid-cols-3 gap-1 h-24 content-start justify-items-end shrink-0" id="draft-red-bans"></div>
-                                <div class="bg-gray-900/80 border border-lck-red/30 rounded p-2 flex-1 flex flex-col gap-2 overflow-y-auto" id="draft-red-picks"></div>
-                            </div>
+                            <div id="calendar-grid" class="grid grid-cols-7 gap-2 flex-1 auto-rows-fr text-sm overflow-y-auto"></div>
                         </div>
+                    </section>
 
-                        <!-- Player Feedback Chat -->
-                        <div class="h-24 bg-lck-panel/90 border border-gray-700 rounded-lg p-3 flex gap-4 items-center shrink-0">
-                            <div id="draft-chat-avatar" class="w-16 h-16 rounded-full bg-gray-800 border-2 border-gray-500 flex items-center justify-center overflow-hidden shrink-0">
-                                <i class="fa-solid fa-users text-3xl text-gray-400"></i>
-                            </div>
-                            <div class="flex flex-col justify-center">
-                                <div class="text-sm font-bold text-gray-300 mb-1" id="chat-player-name">팀원들</div>
-                                <div class="text-lg text-white" id="chat-message">"감독님, 밴픽을 시작하겠습니다. 전략을 지시해주십시오."</div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Tab: In-Game Match -->
-                <section id="view-match" class="view-section p-0 h-full relative bg-[#0a0a0c]">
-                    
-                    <!-- LCK Style Scoreboard Top Bar -->
-                    <div class="absolute top-0 w-full h-16 flex justify-center z-30 font-bold text-white shadow-lg border-b border-gray-800 bg-black/80">
-                        <!-- Blue Side -->
-                        <div class="flex-1 flex items-center justify-end px-6 gap-6">
-                            <!-- Series Score Pips -->
-                            <div class="flex gap-1" id="score-pips-blue"></div>
-                            <div class="flex items-center gap-4 text-sm text-gray-300 font-mono tracking-wider">
-                                <span id="match-blue-towers"><i class="fa-solid fa-chess-rook text-gray-400 mr-1"></i>0</span>
-                                <span id="match-blue-gold" class="text-yellow-200"><i class="fa-solid fa-coins mr-1 text-gray-400"></i>0.0k</span>
-                            </div>
-                            <div class="text-4xl text-lck-blue px-4 drop-shadow-md" id="match-score-blue">0</div>
-                            <div class="flex items-center gap-3">
-                                <div class="text-xl font-black tracking-widest text-gray-200 drop-shadow-md" id="match-blue-name">BLUE</div>
-                                <div id="match-blue-logo" class="shrink-0"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Center Timer & Speed -->
-                        <div class="w-32 flex flex-col items-center justify-center bg-black border-x border-b border-gray-700 rounded-b-lg pb-1 shadow-[0_4px_10px_rgba(0,0,0,0.5)] shrink-0 relative">
-                            <div class="text-2xl font-mono text-white tracking-widest drop-shadow-md" id="match-timer">00:00</div>
-                        </div>
-
-                        <!-- Red Side -->
-                        <div class="flex-1 flex items-center justify-start px-6 gap-6">
-                            <div class="flex items-center gap-3 flex-row-reverse">
-                                <div class="text-xl font-black tracking-widest text-gray-200 drop-shadow-md" id="match-red-name">RED</div>
-                                <div id="match-red-logo" class="shrink-0"></div>
-                            </div>
-                            <div class="text-4xl text-lck-red px-4 drop-shadow-md" id="match-score-red">0</div>
-                            <div class="flex items-center gap-4 text-sm text-gray-300 font-mono tracking-wider">
-                                <span id="match-red-gold" class="text-yellow-200">0.0k<i class="fa-solid fa-coins ml-1 text-gray-400"></i></span>
-                                <span id="match-red-towers">0<i class="fa-solid fa-chess-rook text-gray-400 ml-1"></i></span>
-                            </div>
-                            <!-- Series Score Pips -->
-                            <div class="flex gap-1" id="score-pips-red"></div>
-                        </div>
-                    </div>
-                    
-                    <!-- Dragons & Grubs -->
-                    <div class="absolute top-16 w-full flex justify-center z-20 pointer-events-none mt-2">
-                        <div class="flex items-center justify-center gap-4 text-xs bg-black/60 px-4 py-1 rounded-full border border-gray-700 backdrop-blur-sm">
-                            <div class="flex gap-1" id="match-blue-dragons"></div>
-                            <div class="flex items-center gap-2 mx-2">
-                                <span id="match-blue-grubs" class="text-xs text-lck-blue font-bold">0</span>
-                                <i class="fa-solid fa-bug text-sm text-purple-400"></i>
-                                <span id="match-red-grubs" class="text-xs text-lck-red font-bold">0</span>
-                            </div>
-                            <div class="flex gap-1 flex-row-reverse" id="match-red-dragons"></div>
-                        </div>
-                    </div>
-
-                    <!-- Ingame Side Panels -->
-                    <div class="absolute left-0 top-16 bottom-0 w-72 bg-gradient-to-r from-black/95 to-transparent flex flex-col justify-center gap-1.5 pl-4 z-10 pointer-events-none" id="match-panel-blue">
-                        <!-- Injected -->
-                    </div>
-                    <div class="absolute right-0 top-16 bottom-0 w-72 bg-gradient-to-l from-black/95 to-transparent flex flex-col justify-center gap-1.5 pr-4 z-10 pointer-events-none items-end text-right" id="match-panel-red">
-                        <!-- Injected -->
-                    </div>
-
-                    <!-- Main Viewer Area -->
-                    <div class="flex-1 w-full h-full relative overflow-hidden bg-[url('https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png')] bg-cover bg-center bg-no-repeat flex items-center justify-center">
-                        <div class="absolute inset-0 bg-black/70 z-0 backdrop-blur-sm"></div>
-                        
-                        <!-- Real-time Event Announcer -->
-                        <div id="announcer-container"></div>
-                        
-                        <!-- Separated Kill Log Containers -->
-                        <div id="kill-log-left" class="kill-log-wrapper"></div>
-                        <div id="kill-log-right" class="kill-log-wrapper"></div>
-                        
-                        <!-- Minimap Container (Center) -->
-                        <div class="z-10 relative flex flex-col items-center mt-[-4rem]">
-                            <div id="minimap-container" class="w-[400px] h-[400px] rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.9)] border-4 border-gray-800 relative bg-[url('https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png')] bg-cover bg-center">
-                                <div class="absolute inset-0 bg-black/10 rounded-lg"></div>
-                                <!-- Towers injected via JS -->
-                            </div>
-                            <!-- Speed Controls -->
-                            <div class="flex gap-2 mt-6 bg-black/90 px-5 py-2.5 rounded-full border border-gray-600 pointer-events-auto shadow-lg">
-                                <button class="spd-btn px-4 py-1 bg-gray-800 rounded-full text-gray-400 hover:text-white transition font-bold text-sm" onclick="match.setSpeed(1); sfx.play('click');">1x</button>
-                                <button class="spd-btn active px-4 py-1 bg-gray-200 border-none rounded-full text-black transition font-bold text-sm shadow-[0_0_8px_rgba(255,255,255,0.5)]" onclick="match.setSpeed(2); sfx.play('click');">2x</button>
-                                <button class="spd-btn px-4 py-1 bg-gray-800 rounded-full text-gray-400 hover:text-white transition font-bold text-sm" onclick="match.setSpeed(3); sfx.play('click');">3x</button>
-                            </div>
-                        </div>
-
-                        <!-- Bottom Text Log -->
-                        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[600px] h-32 bg-black/90 border border-gray-700 rounded-lg flex flex-col z-20 shadow-xl pointer-events-none">
-                            <div class="p-1.5 border-b border-gray-700 text-xs text-gray-400 flex justify-between items-center shrink-0 bg-gray-900/80 rounded-t-lg">
-                                <span class="ml-2">실시간 인게임 로그 (세트 <span id="log-set-num">1</span>)</span>
-                                <span class="text-red-500 animate-pulse font-bold tracking-widest mr-2"><i class="fa-solid fa-circle text-[8px] align-middle mr-1"></i>LIVE</span>
-                            </div>
-                            <div class="flex-1 p-2 overflow-y-auto flex flex-col gap-1 font-mono text-xs pointer-events-auto" id="match-log">
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Match Result Modal -->
-                <div id="view-result" class="hidden absolute inset-0 bg-black/95 z-50 flex items-center justify-center backdrop-blur-sm">
-                    <div class="bg-lck-panel border border-gray-700 p-8 rounded-xl w-[800px] max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col items-center">
-                        <div id="res-subtitle" class="text-gray-400 font-bold tracking-widest mb-1 text-sm">SET 1 RESULT</div>
-                        <h2 class="text-6xl font-black mb-6 tracking-widest" id="res-title">VICTORY</h2>
-                        
-                        <div class="flex justify-between items-center w-full bg-gray-900 p-4 rounded-lg mb-6 border border-gray-800">
-                            <div class="text-center w-1/3">
-                                <div id="res-blue-name" class="text-sm text-gray-400 mb-1">TEAM BLUE</div>
-                                <div id="res-blue-score" class="text-5xl font-bold text-lck-blue">0</div>
-                            </div>
-                            <div class="w-1/3 text-center flex flex-col items-center">
-                                <div class="text-xs text-gray-500 mb-1">SERIES SCORE</div>
-                                <div id="res-series-score" class="text-3xl font-bold text-white tracking-widest mb-1">0 : 0</div>
-                                <div class="text-[11px] text-gray-600 bg-gray-800 px-3 py-1 rounded-full border border-gray-700">TIME: <span id="res-time">00:00</span></div>
-                            </div>
-                            <div class="text-center w-1/3">
-                                <div id="res-red-name" class="text-sm text-gray-400 mb-1">TEAM RED</div>
-                                <div id="res-red-score" class="text-5xl font-bold text-lck-red">0</div>
-                            </div>
-                        </div>
-
-                        <!-- Detailed Stats Table -->
-                        <div class="w-full mb-6">
-                            <table class="w-full text-center text-xs text-gray-300 border-collapse">
+                    <!-- Tab: Standings -->
+                    <section id="view-standings" class="view-section gap-6">
+                        <div><h2 class="text-2xl font-bold text-white mb-2">LCK 리그 순위</h2></div>
+                        <div class="bg-lck-panel rounded-lg border border-gray-800 max-w-4xl shrink-0 flex-1 overflow-y-auto">
+                            <table class="w-full text-center border-collapse">
                                 <thead>
-                                    <tr class="border-b border-gray-700 text-gray-500 bg-gray-900/50">
-                                        <th class="p-2 text-left pl-4">BLUE</th>
-                                        <th class="p-2">K/D/A</th>
-                                        <th class="p-2 border-r border-gray-700">DMG</th>
-                                        <th class="p-2 text-right pr-4">RED</th>
-                                        <th class="p-2">K/D/A</th>
-                                        <th class="p-2">DMG</th>
+                                    <tr class="bg-gray-800 text-gray-400 text-sm border-b border-gray-700">
+                                        <th class="p-3 font-medium">순위</th><th class="p-3 font-medium text-left">팀</th>
+                                        <th class="p-3 font-medium">승</th><th class="p-3 font-medium">패</th><th class="p-3 font-medium">득실차</th>
                                     </tr>
                                 </thead>
-                                <tbody id="res-stats-body">
-                                    <!-- Injected -->
-                                </tbody>
+                                <tbody id="standings-list" class="text-sm"></tbody>
                             </table>
                         </div>
+                    </section>
+                    
+                    <!-- Tab: Champ Stats -->
+                    <section id="view-champstats" class="view-section gap-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <h2 class="text-2xl font-bold text-white">챔피언 통계</h2>
+                            <div class="flex gap-1" id="stat-role-filters">
+                                <button onclick="app.filterChampStats('ALL')" class="stat-role-btn active px-4 py-1.5 rounded bg-gray-700 text-white text-sm font-bold transition">ALL</button>
+                                <button onclick="app.filterChampStats('TOP')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">TOP</button>
+                                <button onclick="app.filterChampStats('JUG')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">JUG</button>
+                                <button onclick="app.filterChampStats('MID')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">MID</button>
+                                <button onclick="app.filterChampStats('BOT')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">BOT</button>
+                                <button onclick="app.filterChampStats('SUP')" class="stat-role-btn px-4 py-1.5 rounded text-gray-400 hover:bg-gray-800 text-sm font-bold transition">SUP</button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-900 border border-gray-700 rounded-lg flex-1 overflow-hidden flex flex-col">
+                            <table class="w-full text-center border-collapse table-fixed">
+                                <thead>
+                                    <tr class="bg-gray-800 text-gray-400 text-xs border-b border-gray-700 select-none">
+                                        <th class="p-2 font-medium text-left pl-6 w-[40%]">챔피언</th>
+                                        <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('pick')">픽률 <i id="sort-icon-pick" class="fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]"></i></th>
+                                        <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('ban')">밴률 <i id="sort-icon-ban" class="fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]"></i></th>
+                                        <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('bp')">밴픽률 <i id="sort-icon-bp" class="fa-solid fa-sort-down sort-icon text-lck-accent ml-1 text-[10px]"></i></th>
+                                        <th class="p-2 font-medium cursor-pointer hover:text-white w-[15%]" onclick="app.sortChampStats('win')">승률 <i id="sort-icon-win" class="fa-solid fa-sort sort-icon text-gray-500 ml-1 text-[10px]"></i></th>
+                                    </tr>
+                                </thead>
+                            </table>
+                            <div class="overflow-y-auto flex-1">
+                                <table class="w-full text-center border-collapse table-fixed">
+                                    <tbody id="champ-stats-list" class="text-sm text-gray-300"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
 
-                        <!-- Feedback Section for Next Set -->
-                        <div id="res-feedback-section" class="w-full border-t border-gray-700 pt-6 mb-6">
-                            <h3 class="text-white text-sm font-bold mb-3 text-center">다음 세트 감독 전술 지시</h3>
-                            <div class="flex justify-center gap-3">
-                                <button onclick="match.setTactic('balance', this); sfx.play('click');" class="tactic-btn active bg-gray-700 border border-lck-accent text-white px-6 py-2 rounded text-sm font-bold transition">기본 (밸런스)</button>
-                                <button onclick="match.setTactic('aggro', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">공격적 (교전)</button>
-                                <button onclick="match.setTactic('safe', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">수비적 (성장)</button>
-                                <button onclick="match.setTactic('obj', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">오브젝트 집중</button>
+                    <!-- Tab: Draft (Match Preparation) -->
+                    <section id="view-draft" class="view-section p-0 h-full bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-5 relative">
+                        <div class="absolute inset-0 bg-black/90 z-0"></div>
+                        
+                        <div id="bp-anim-overlay" class="absolute inset-0 z-[100] flex items-center justify-center hidden">
+                            <div id="bp-anim-card" class="relative w-48 h-48 sm:w-64 sm:h-64 shadow-2xl flex items-center justify-center border-4 border-transparent rounded-lg overflow-hidden bg-black">
+                                <img id="bp-anim-img" class="w-full h-full object-cover rounded-lg">
+                                <div id="bp-anim-slash" class="absolute bg-red-600 h-4 shadow-[0_0_20px_red] hidden" style="width: 150%; left: -25%; top: 48%; transform: rotate(-45deg);"></div>
                             </div>
                         </div>
 
-                        <button id="btn-res-next-set" onclick="match.startNextSet(); sfx.play('click');" class="bg-lck-blue text-white font-bold py-3 px-12 rounded w-full hover:bg-blue-500 mb-2 shadow-[0_0_15px_rgba(11,198,227,0.4)] transition">
-                            다음 세트 진입
-                        </button>
-                        <button id="btn-res-end-match" onclick="app.endMatch(); sfx.play('click');" class="hidden bg-lck-accent text-black font-bold py-3 px-12 rounded w-full hover:bg-yellow-500 shadow-[0_0_15px_rgba(200,155,60,0.4)] transition">
-                            매치 종료 및 대시보드 복귀
-                        </button>
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
+                        <div class="z-10 flex flex-col h-full p-4 gap-4">
+                            <!-- Scoreboard Header -->
+                            <div class="flex justify-between items-center bg-black/50 border border-gray-800 p-3 rounded shrink-0">
+                                <div class="w-1/3 flex items-center gap-3">
+                                    <div id="draft-blue-logo" class="shrink-0"></div>
+                                    <div><h3 class="font-bold text-lck-blue text-lg" id="draft-blue-name">BLUE</h3><div class="text-xs text-gray-400">블루 진영</div></div>
+                                </div>
+                                <div class="w-1/3 text-center flex flex-col justify-center items-center">
+                                    <div id="draft-status" class="inline-block px-6 py-2 bg-gray-800 text-white font-bold rounded-full text-lg border border-gray-600">준비 중...</div>
+                                </div>
+                                <div class="w-1/3 flex items-center justify-end gap-3 text-right">
+                                    <div><h3 class="font-bold text-lck-red text-lg" id="draft-red-name">RED</h3><div class="text-xs text-gray-400">레드 진영</div></div>
+                                    <div id="draft-red-logo" class="shrink-0"></div>
+                                </div>
+                            </div>
 
-    <!-- 스크립트 로딩: 전역 방식으로 단순화 및 안정성 확보 -->
+                            <div class="flex-1 flex gap-4 overflow-hidden">
+                                <div class="w-64 flex flex-col gap-2 h-full">
+                                    <div class="bg-gray-900/80 border border-lck-blue/30 rounded p-2 grid grid-cols-3 gap-1 h-24 content-start shrink-0" id="draft-blue-bans"></div>
+                                    <div class="bg-gray-900/80 border border-lck-blue/30 rounded p-2 flex-1 flex flex-col gap-2 overflow-y-auto" id="draft-blue-picks"></div>
+                                </div>
+                                <div class="flex-1 bg-lck-panel/80 border border-gray-800 rounded p-4 flex flex-col gap-3">
+                                    <div class="flex justify-between items-center bg-gray-900 p-2 rounded gap-2 shrink-0">
+                                        <div class="flex gap-2 shrink-0" id="draft-role-filters">
+                                            <button onclick="draft.filter('ALL'); sfx.play('click');" class="role-filter active text-white font-bold px-3 py-1.5 rounded bg-gray-700 text-sm">ALL</button>
+                                            <button onclick="draft.filter('TOP'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">TOP</button>
+                                            <button onclick="draft.filter('JUG'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">JUG</button>
+                                            <button onclick="draft.filter('MID'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">MID</button>
+                                            <button onclick="draft.filter('BOT'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">BOT</button>
+                                            <button onclick="draft.filter('SUP'); sfx.play('click');" class="role-filter text-gray-400 px-3 py-1.5 rounded hover:bg-gray-800 text-sm">SUP</button>
+                                        </div>
+                                        <div class="relative flex-1 max-w-[200px]">
+                                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                                            <input type="text" id="draft-search-input" oninput="draft.onSearch(this.value)" placeholder="챔피언 검색..." class="w-full bg-gray-800 text-white text-xs px-8 py-1.5 rounded border border-gray-600 focus:outline-none focus:border-lck-accent placeholder-gray-500">
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 overflow-y-auto grid grid-cols-5 md:grid-cols-7 lg:grid-cols-8 gap-2 content-start pr-2" id="draft-pool"></div>
+                                    <div class="h-auto flex flex-col justify-center items-center gap-2 border-t border-gray-700 pt-3 min-h-[60px] shrink-0">
+                                        <div id="draft-role-select" class="hidden flex gap-2 mb-1">
+                                            <button onclick="draft.selectRole('TOP'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">TOP</button>
+                                            <button onclick="draft.selectRole('JUG'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">JUG</button>
+                                            <button onclick="draft.selectRole('MID'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">MID</button>
+                                            <button onclick="draft.selectRole('BOT'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">BOT</button>
+                                            <button onclick="draft.selectRole('SUP'); sfx.play('click');" class="draft-role-btn px-3 py-1 rounded bg-gray-800 border border-gray-600 text-gray-400 text-xs font-bold hover:bg-gray-700">SUP</button>
+                                        </div>
+                                        <div class="flex gap-4 w-full justify-center">
+                                            <button id="btn-draft-ban" onclick="draft.confirmAction()" class="hidden bg-red-600 text-white font-bold py-2 px-10 rounded w-48 hover:bg-red-500">밴 (BAN)</button>
+                                            <button id="btn-draft-pick" onclick="draft.confirmAction()" class="hidden bg-blue-600 text-white font-bold py-2 px-10 rounded w-48 hover:bg-blue-500">픽 (PICK)</button>
+                                            <button id="btn-draft-start" onclick="match.init()" class="hidden bg-lck-accent text-black font-bold py-2 px-10 rounded w-64 hover:bg-yellow-500 shadow-[0_0_10px_#c89b3c]">인게임 진입</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="w-64 flex flex-col gap-2 h-full">
+                                    <div class="bg-gray-900/80 border border-lck-red/30 rounded p-2 grid grid-cols-3 gap-1 h-24 content-start justify-items-end shrink-0" id="draft-red-bans"></div>
+                                    <div class="bg-gray-900/80 border border-lck-red/30 rounded p-2 flex-1 flex flex-col gap-2 overflow-y-auto" id="draft-red-picks"></div>
+                                </div>
+                            </div>
+                            <div class="h-24 bg-lck-panel/90 border border-gray-700 rounded-lg p-3 flex gap-4 items-center shrink-0">
+                                <div id="draft-chat-avatar" class="w-16 h-16 rounded-full bg-gray-800 border-2 border-gray-500 flex items-center justify-center overflow-hidden shrink-0">
+                                    <i class="fa-solid fa-users text-3xl text-gray-400"></i>
+                                </div>
+                                <div class="flex flex-col justify-center">
+                                    <div class="text-sm font-bold text-gray-300 mb-1" id="chat-player-name">팀원들</div>
+                                    <div class="text-lg text-white" id="chat-message">"감독님, 밴픽을 시작하겠습니다. 전략을 지시해주십시오."</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: In-Game Match -->
+                    <section id="view-match" class="view-section p-0 h-full relative bg-[#0a0a0c]">
+                        <div class="absolute top-0 w-full h-16 flex justify-center z-30 font-bold text-white shadow-lg border-b border-gray-800 bg-black/80">
+                            <!-- Blue Side -->
+                            <div class="flex-1 flex items-center justify-end px-6 gap-6">
+                                <div class="flex gap-1" id="score-pips-blue"></div>
+                                <div class="flex items-center gap-4 text-sm text-gray-300 font-mono tracking-wider">
+                                    <span id="match-blue-towers"><i class="fa-solid fa-chess-rook text-gray-400 mr-1"></i>0</span>
+                                    <span id="match-blue-gold" class="text-yellow-200"><i class="fa-solid fa-coins mr-1 text-gray-400"></i>0.0k</span>
+                                </div>
+                                <div class="text-4xl text-lck-blue px-4 drop-shadow-md" id="match-score-blue">0</div>
+                                <div class="flex items-center gap-3">
+                                    <div class="text-xl font-black tracking-widest text-gray-200 drop-shadow-md" id="match-blue-name">BLUE</div>
+                                    <div id="match-blue-logo" class="shrink-0"></div>
+                                </div>
+                            </div>
+                            <!-- Center Timer & Speed -->
+                            <div class="w-32 flex flex-col items-center justify-center bg-black border-x border-b border-gray-700 rounded-b-lg pb-1 shadow-[0_4px_10px_rgba(0,0,0,0.5)] shrink-0 relative">
+                                <div class="text-2xl font-mono text-white tracking-widest drop-shadow-md" id="match-timer">00:00</div>
+                            </div>
+                            <!-- Red Side -->
+                            <div class="flex-1 flex items-center justify-start px-6 gap-6">
+                                <div class="flex items-center gap-3 flex-row-reverse">
+                                    <div class="text-xl font-black tracking-widest text-gray-200 drop-shadow-md" id="match-red-name">RED</div>
+                                    <div id="match-red-logo" class="shrink-0"></div>
+                                </div>
+                                <div class="text-4xl text-lck-red px-4 drop-shadow-md" id="match-score-red">0</div>
+                                <div class="flex items-center gap-4 text-sm text-gray-300 font-mono tracking-wider">
+                                    <span id="match-red-gold" class="text-yellow-200">0.0k<i class="fa-solid fa-coins ml-1 text-gray-400"></i></span>
+                                    <span id="match-red-towers">0<i class="fa-solid fa-chess-rook text-gray-400 ml-1"></i></span>
+                                </div>
+                                <div class="flex gap-1" id="score-pips-red"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Dragons & Grubs -->
+                        <div class="absolute top-16 w-full flex justify-center z-20 pointer-events-none mt-2">
+                            <div class="flex items-center justify-center gap-4 text-xs bg-black/60 px-4 py-1 rounded-full border border-gray-700 backdrop-blur-sm">
+                                <div class="flex gap-1" id="match-blue-dragons"></div>
+                                <div class="flex items-center gap-2 mx-2">
+                                    <span id="match-blue-grubs" class="text-xs text-lck-blue font-bold">0</span>
+                                    <i class="fa-solid fa-bug text-sm text-purple-400"></i>
+                                    <span id="match-red-grubs" class="text-xs text-lck-red font-bold">0</span>
+                                </div>
+                                <div class="flex gap-1 flex-row-reverse" id="match-red-dragons"></div>
+                            </div>
+                        </div>
+
+                        <!-- Ingame Side Panels -->
+                        <div class="absolute left-0 top-16 bottom-0 w-64 bg-gradient-to-r from-black/95 to-transparent flex flex-col justify-center gap-1.5 pl-4 z-10 pointer-events-none" id="match-panel-blue"></div>
+                        <div class="absolute right-0 top-16 bottom-0 w-64 bg-gradient-to-l from-black/95 to-transparent flex flex-col justify-center gap-1.5 pr-4 z-10 pointer-events-none items-end text-right" id="match-panel-red"></div>
+
+                        <!-- Main Viewer Area -->
+                        <div class="flex-1 w-full h-full relative overflow-hidden bg-[url('https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png')] bg-cover bg-center bg-no-repeat flex items-center justify-center">
+                            <div class="absolute inset-0 bg-black/70 z-0 backdrop-blur-sm"></div>
+                            <div id="announcer-container"></div>
+                            
+                            <!-- Separated Kill Log Containers -->
+                            <div id="kill-log-left" class="kill-log-wrapper"></div>
+                            <div id="kill-log-right" class="kill-log-wrapper"></div>
+                            
+                            <!-- Minimap Container -->
+                            <div class="z-10 relative flex flex-col items-center mt-[-4rem]">
+                                <div id="minimap-container" class="w-[400px] h-[400px] rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.9)] border-4 border-gray-800 relative bg-[url('https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png')] bg-cover bg-center">
+                                    <div class="absolute inset-0 bg-black/10 rounded-lg"></div>
+                                </div>
+                                <!-- Speed Controls -->
+                                <div class="flex gap-2 mt-6 bg-black/90 px-5 py-2.5 rounded-full border border-gray-600 pointer-events-auto shadow-lg">
+                                    <button class="spd-btn px-4 py-1 bg-gray-800 rounded-full text-gray-400 hover:text-white transition font-bold text-sm" onclick="match.setSpeed(1); sfx.play('click');">1x</button>
+                                    <button class="spd-btn active px-4 py-1 bg-gray-200 border-none rounded-full text-black transition font-bold text-sm shadow-[0_0_8px_rgba(255,255,255,0.5)]" onclick="match.setSpeed(2); sfx.play('click');">2x</button>
+                                    <button class="spd-btn px-4 py-1 bg-gray-800 rounded-full text-gray-400 hover:text-white transition font-bold text-sm" onclick="match.setSpeed(3); sfx.play('click');">3x</button>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Text Log -->
+                            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[600px] h-32 bg-black/90 border border-gray-700 rounded-lg flex flex-col z-20 shadow-xl pointer-events-none">
+                                <div class="p-1.5 border-b border-gray-700 text-xs text-gray-400 flex justify-between items-center shrink-0 bg-gray-900/80 rounded-t-lg">
+                                    <span class="ml-2">실시간 인게임 로그 (세트 <span id="log-set-num">1</span>)</span>
+                                    <span class="text-red-500 animate-pulse font-bold tracking-widest mr-2"><i class="fa-solid fa-circle text-[8px] align-middle mr-1"></i>LIVE</span>
+                                </div>
+                                <div class="flex-1 p-2 overflow-y-auto flex flex-col gap-1 font-mono text-xs pointer-events-auto" id="match-log"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Match Result Modal -->
+                    <div id="view-result" class="hidden absolute inset-0 bg-black/95 z-50 flex items-center justify-center backdrop-blur-sm">
+                        <div class="bg-lck-panel border border-gray-700 p-8 rounded-xl w-[1000px] max-w-[95vw] max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col items-center">
+                            <div id="res-subtitle" class="text-gray-400 font-bold tracking-widest mb-1 text-sm">SET 1 RESULT</div>
+                            <h2 class="text-6xl font-black mb-6 tracking-widest" id="res-title">VICTORY</h2>
+                            
+                            <div class="flex justify-between items-center w-full bg-gray-900 p-4 rounded-lg mb-6 border border-gray-800">
+                                <div class="text-center w-1/3">
+                                    <div id="res-blue-name" class="text-sm text-gray-400 mb-1">TEAM BLUE</div>
+                                    <div id="res-blue-score" class="text-5xl font-bold text-lck-blue">0</div>
+                                </div>
+                                <div class="w-1/3 text-center flex flex-col items-center">
+                                    <div class="text-xs text-gray-500 mb-1">SERIES SCORE</div>
+                                    <div id="res-series-score" class="text-3xl font-bold text-white tracking-widest mb-1">0 : 0</div>
+                                    <div class="text-[11px] text-gray-600 bg-gray-800 px-3 py-1 rounded-full border border-gray-700">TIME: <span id="res-time">00:00</span></div>
+                                </div>
+                                <div class="text-center w-1/3">
+                                    <div id="res-red-name" class="text-sm text-gray-400 mb-1">TEAM RED</div>
+                                    <div id="res-red-score" class="text-5xl font-bold text-lck-red">0</div>
+                                </div>
+                            </div>
+
+                            <div class="w-full mb-6 bg-gray-900/50 p-6 rounded-lg border border-gray-800">
+                                <div class="text-center font-bold text-gray-400 mb-6 tracking-widest text-sm">TOTAL DAMAGE DEALT & MATCH STATS</div>
+                                <div id="res-stats-body" class="flex flex-col gap-5"></div>
+                            </div>
+
+                            <div id="res-feedback-section" class="w-full border-t border-gray-700 pt-6 mb-6">
+                                <h3 class="text-white text-sm font-bold mb-3 text-center">다음 세트 감독 전술 지시</h3>
+                                <div class="flex justify-center gap-3">
+                                    <button onclick="match.setTactic('balance', this); sfx.play('click');" class="tactic-btn active bg-gray-700 border border-lck-accent text-white px-6 py-2 rounded text-sm font-bold transition">기본 (밸런스)</button>
+                                    <button onclick="match.setTactic('aggro', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">공격적 (교전)</button>
+                                    <button onclick="match.setTactic('safe', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">수비적 (성장)</button>
+                                    <button onclick="match.setTactic('obj', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">오브젝트 집중</button>
+                                </div>
+                            </div>
+
+                            <button id="btn-res-next-set" onclick="match.startNextSet(); sfx.play('click');" class="bg-lck-blue text-white font-bold py-3 px-12 rounded w-full hover:bg-blue-500 mb-2 shadow-[0_0_15px_rgba(11,198,227,0.4)] transition">
+                                다음 세트 진입
+                            </button>
+                            <button id="btn-res-end-match" onclick="app.endMatch(); sfx.play('click');" class="hidden bg-lck-accent text-black font-bold py-3 px-12 rounded w-full hover:bg-yellow-500 shadow-[0_0_15px_rgba(200,155,60,0.4)] transition">
+                                매치 종료 및 대시보드 복귀
+                            </button>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div> <!-- /#app-container -->
+
     <script>
         const initDataAndApp = () => {
             if (typeof window.DATA === 'undefined' || !window.DATA) {
@@ -876,6 +819,18 @@
                     return `<img ${idAttr} src="${t.logo}" class="${imgClasses} object-contain shrink-0 drop-shadow-md" alt="${t.name}" onerror="this.outerHTML='<div class=&quot;${extraClass} rounded flex items-center justify-center font-bold text-white shadow-inner shrink-0&quot; style=&quot;background-color: ${t.color}&quot;>${t.name.substring(0,1)}</div>'">`;
                 }
                 return `<div ${idAttr} class="${extraClass} rounded flex items-center justify-center font-bold text-white shadow-inner shrink-0" style="background-color: ${t.color}">${t.name.substring(0,1)}</div>`;
+            },
+            
+            // 역할군 가중치에 따라 랜덤하게 역할 선택 (KDA 배분용)
+            getWeightedRole: (weights) => {
+                let sum = 0;
+                for (let r in weights) sum += weights[r];
+                let rand = Math.random() * sum;
+                for (let r in weights) {
+                    if (rand < weights[r]) return r;
+                    rand -= weights[r];
+                }
+                return 'SUP';
             }
         };
 
@@ -976,7 +931,6 @@
                 document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
                 document.getElementById(`view-${tabId}`).classList.add('active');
 
-                // 좌측 메뉴 사이드바 숨김 처리 (밴픽 및 게임화면 진입 시 확장된 화면 제공)
                 const sidebar = document.getElementById('main-sidebar');
                 if (sidebar) {
                     if (tabId === 'draft' || tabId === 'match') {
@@ -1332,7 +1286,6 @@
             },
 
             showSideSelectModal() {
-                // 승리 시 진영 선택 모달 노출
                 document.getElementById('modal-side-select').classList.remove('hidden');
             },
             
@@ -1448,6 +1401,7 @@
                 }
             },
 
+            // UI 렌더링 업데이트
             updateUI() {
                 const t = utils.getTeam(state.playerTeamId);
                 document.getElementById('top-team-name').innerText = t.name;
@@ -1969,7 +1923,6 @@
                             </div>
                             <div class="text-[10px] font-bold text-white mt-1 truncate w-full text-center">${c.name}</div>
                             
-                            <!-- Hover Overlay -->
                             <div class="absolute inset-0 bg-black/95 flex flex-col justify-center items-center opacity-0 group-hover:opacity-100 transition-all duration-200 z-50 pointer-events-none p-2 rounded border-2 border-lck-accent shadow-xl scale-[1.03]">
                                 <div class="text-[13px] font-black text-lck-accent mb-1 border-b border-gray-700 w-full text-center pb-1 truncate">${c.name}</div>
                                 <div class="flex flex-col gap-1 text-[11px] text-white font-mono w-full px-1">
@@ -2309,6 +2262,20 @@
         // MATCH SIMULATOR
         // ==========================================
         window.match = {
+            // 실제 LCK 데이터를 반영한 역할군별 가중치 (핵심 기능 업데이트)
+            roleParams: {
+                // 킬 확률: 원딜(35%)과 미드(28%)가 대부분 킬을 가져가며 서포터는 2%로 극한으로 낮춤
+                kill: { TOP: 20, JUG: 15, MID: 28, BOT: 35, SUP: 2 },
+                // 데스 확률: 패배/불리한 상황 시 죽기 쉬운 역할군. 서포터, 원딜, 정글 비중을 높임
+                death: { TOP: 20, JUG: 20, MID: 15, BOT: 25, SUP: 20 },
+                // 어시스트 확률(0~1.0): 서포터는 거의 무조건 어시스트에 관여(85%)
+                assist: { TOP: 0.35, JUG: 0.65, MID: 0.45, BOT: 0.35, SUP: 0.85 },
+                // 데미지 배율 (DPM): 원딜 1.1, 미드 0.95, 탑 0.85, 서폿 0.25 로 현실성 부여
+                dmg: { TOP: 0.85, JUG: 0.6, MID: 0.95, BOT: 1.1, SUP: 0.25 },
+                // CS 수급 배율
+                cs: { TOP: 1.0, JUG: 0.8, MID: 1.1, BOT: 1.1, SUP: 0.15 }
+            },
+
             state: {
                 time: 0, interval: null, speed: 2, tactic: 'balance',
                 nextDragonTime: 300, dragonAlive: false,
@@ -2399,23 +2366,15 @@
                 map.innerHTML = '<div class="absolute inset-0 bg-black/10 rounded-lg"></div>';
                 
                 const bTowers = [ 
-                    // Top: Outer, Inner, Inhibitor
                     {x: 12, y: 34, t:'outer'}, {x: 12, y: 50, t:'inner'}, {x: 12, y: 65, t:'inhib'}, 
-                    // Mid: Outer, Inner, Inhibitor
                     {x: 43, y: 55, t:'outer'}, {x: 34, y: 65, t:'inner'}, {x: 25, y: 73, t:'inhib'}, 
-                    // Bot: Outer, Inner, Inhibitor
                     {x: 74, y: 92, t:'outer'}, {x: 52, y: 92, t:'inner'}, {x: 32, y: 91, t:'inhib'}, 
-                    // Nexus Towers (Blue)
                     {x: 14, y: 78, t:'nexus', type:'inhib-icon'}, {x: 19, y: 83, t:'nexus', type:'inhib-icon'}
                 ];
                 const rTowers = [
-                    // Top: Outer, Inner, Inhibitor
                     {x: 27, y: 8, t:'outer'}, {x: 52, y: 11, t:'inner'}, {x: 65, y: 10, t:'inhib'}, 
-                    // Mid: Outer, Inner, Inhibitor
                     {x: 60, y: 44, t:'outer'}, {x: 68, y: 35, t:'inner'}, {x: 76, y: 26, t:'inhib'}, 
-                    // Bot: Outer, Inner, Inhibitor
                     {x: 93, y: 69, t:'outer'}, {x: 92, y: 46, t:'inner'}, {x: 93, y: 32, t:'inhib'}, 
-                    // Nexus Towers (Red)
                     {x: 82, y: 19, t:'nexus', type:'inhib-icon'}, {x: 86, y: 23, t:'nexus', type:'inhib-icon'}
                 ];
                 
@@ -2531,6 +2490,23 @@
                     this.log("장로 드래곤이 등장했습니다.", "sys");
                 }
 
+                // ==========================================
+                // 현실적인 DPM/CS 생성 (시간에 비례하여 패시브 누적)
+                // ==========================================
+                let timeMin = this.state.time / 60;
+                window.DATA.roles.forEach(role => {
+                    // 기본 틱 당 데미지: 시간이 지날수록 데미지 증가, 역할군별 배율(원딜 최고, 서폿 최저) 적용
+                    let tickDmgB = (25 + timeMin * 2) * this.roleParams.dmg[role] * (Math.random() * 0.4 + 0.8);
+                    let tickDmgR = (25 + timeMin * 2) * this.roleParams.dmg[role] * (Math.random() * 0.4 + 0.8);
+                    
+                    this.state.blue.stats[role].dmg += tickDmgB;
+                    this.state.red.stats[role].dmg += tickDmgR;
+                    
+                    // 미니언(CS) 파밍
+                    this.state.blue.stats[role].cs += (Math.random() * 3) * this.roleParams.cs[role];
+                    this.state.red.stats[role].cs += (Math.random() * 3) * this.roleParams.cs[role];
+                });
+
                 let bluePwr = window.DATA.roles.reduce((s, ro) => {
                     const p = window.DATA.players.find(pl => pl.teamId === this.state.blue.id && pl.role.includes(ro));
                     return s + (p ? p.tier : 1);
@@ -2548,11 +2524,12 @@
                 
                 if (goldDiff > 5000) blueWinChance += 0.15;
                 if (goldDiff < -5000) blueWinChance -= 0.15;
-                
                 blueWinChance = Math.max(0.1, Math.min(0.9, blueWinChance));
-
                 if (Math.random() < 0.03) blueWinChance = blueWinChance > 0.5 ? 0.3 : 0.7;
 
+                // ==========================================
+                // 한타 및 오브젝트 싸움 로직
+                // ==========================================
                 if (this.state.time > 300 && r < 0.08 && (this.state.dragonAlive || this.state.baronAlive || this.state.elderAlive)) {
                     const isBlueWin = Math.random() < blueWinChance + (isObj?0.15:-0.1);
                     const winner = isBlueWin ? this.state.blue : this.state.red;
@@ -2561,10 +2538,23 @@
                     const deaths = Math.floor(Math.random()*3)+1;
                     for(let i=0; i<deaths; i++) {
                         winner.kills++; winner.gold += 300;
-                        const wRole = window.DATA.roles[Math.floor(Math.random()*5)];
-                        const lRole = window.DATA.roles[Math.floor(Math.random()*5)];
-                        winner.stats[wRole].k++; winner.stats[wRole].dmg += 1500;
+                        
+                        // 역할군별 킬/데스 배분을 유틸 가중치 함수로 적용
+                        const wRole = utils.getWeightedRole(this.roleParams.kill);
+                        const lRole = utils.getWeightedRole(this.roleParams.death);
+                        
+                        winner.stats[wRole].k++; 
+                        // 킬 발생 시 순간 버스트 데미지 반영
+                        winner.stats[wRole].dmg += (600 + Math.random()*400) * this.roleParams.dmg[wRole]; 
                         loser.stats[lRole].d++;
+                        
+                        // 어시스트 부여 확률 및 교전 데미지
+                        window.DATA.roles.forEach(role => {
+                            if(role !== wRole && Math.random() < this.roleParams.assist[role] + 0.1) {
+                                winner.stats[role].a++;
+                                winner.stats[role].dmg += (300 + Math.random()*200) * this.roleParams.dmg[role];
+                            }
+                        });
                         
                         const killer = winner.champs[wRole];
                         const victim = loser.champs[lRole];
@@ -2602,25 +2592,32 @@
                         sfx.play('kill');
                     }
                 }
+                // ==========================================
+                // 라인전 및 소규모 교전 (잘라먹기)
+                // ==========================================
                 else if (r < 0.14) { 
                     const isBlueAtk = Math.random() < blueWinChance + (isAggro?0.1:-0.1);
                     const atkSide = isBlueAtk ? this.state.blue : this.state.red;
                     const defSide = isBlueAtk ? this.state.red : this.state.blue;
                     
-                    const atkRole = window.DATA.roles[Math.floor(Math.random()*5)];
-                    const defRole = window.DATA.roles[Math.floor(Math.random()*5)];
+                    // 가중치에 따라 킬러와 데스자 배분
+                    const atkRole = utils.getWeightedRole(this.roleParams.kill);
+                    const defRole = utils.getWeightedRole(this.roleParams.death);
                     const killer = atkSide.champs[atkRole];
                     const victim = defSide.champs[defRole];
                     
                     atkSide.kills++; atkSide.gold += 300;
                     
                     atkSide.stats[atkRole].k++;
-                    atkSide.stats[atkRole].dmg += Math.floor(Math.random()*2000) + 500;
+                    atkSide.stats[atkRole].dmg += (500 + Math.random()*500) * this.roleParams.dmg[atkRole];
                     defSide.stats[defRole].d++;
                     this.flashHpBar(isBlueAtk ? 'R' : 'B', defRole);
 
-                    window.DATA.roles.forEach(r => {
-                        if(r !== atkRole && Math.random() < 0.5) { atkSide.stats[r].a++; atkSide.stats[r].dmg += Math.floor(Math.random()*1000); }
+                    window.DATA.roles.forEach(role => {
+                        if(role !== atkRole && Math.random() < this.roleParams.assist[role]) { 
+                            atkSide.stats[role].a++; 
+                            atkSide.stats[role].dmg += (200 + Math.random()*200) * this.roleParams.dmg[role]; 
+                        }
                     });
                     
                     const killerTeamName = utils.getTeam(atkSide.id).name;
@@ -2631,14 +2628,16 @@
                     this.log(`${killerTeamName} ${playerName}의 킬!`, isBlueAtk?'blue':'red');
                     sfx.play('kill');
                 } 
+                // ==========================================
+                // 포탑 및 넥서스 파괴
+                // ==========================================
                 else { 
                     let basePushThreshold = 0.22;
-                    if (goldDiff >= 10000 || goldDiff <= -10000) basePushThreshold = 0.45; // 10k 이상 차이나면 포탑 철거 속도 가속
+                    if (goldDiff >= 10000 || goldDiff <= -10000) basePushThreshold = 0.45; 
                     else if (goldDiff >= 5000 || goldDiff <= -5000) basePushThreshold = 0.30;
                     
                     if (r < basePushThreshold && this.state.time > 480) { 
                         let pushWinChance = blueWinChance;
-                        // 골드 격차가 클수록 유리한 팀이 억지 푸시를 당하지 않도록 억제
                         if (goldDiff >= 10000) pushWinChance = 0.95; 
                         else if (goldDiff <= -10000) pushWinChance = 0.05;
 
@@ -2669,11 +2668,6 @@
                 this.state.blue.gold += 320 + (this.state.blue.dragons.length * 5); 
                 this.state.red.gold += 320 + (this.state.red.dragons.length * 5);
                 
-                window.DATA.roles.forEach(r => {
-                    this.state.blue.stats[r].cs += Math.floor(Math.random()*3);
-                    this.state.red.stats[r].cs += Math.floor(Math.random()*3);
-                });
-
                 this.updateUI();
 
                 if (this.state.time > 3600) { 
@@ -2773,27 +2767,53 @@
                     const bW = (bSt.dmg / maxDmg) * 100;
                     const rW = (rSt.dmg / maxDmg) * 100;
 
+                    // 데미지 수치 K 단위 변환 (예: 24.0K)
+                    const dispBDmg = (bSt.dmg / 1000).toFixed(1) + 'K';
+                    const dispRDmg = (rSt.dmg / 1000).toFixed(1) + 'K';
+                    
+                    // 선수 이름 가져오기
+                    const bPlayer = window.DATA.players.find(p => p.teamId === draft.state.blueId && p.role.includes(r)) || { name: r };
+                    const rPlayer = window.DATA.players.find(p => p.teamId === draft.state.redId && p.role.includes(r)) || { name: r };
+
                     tbody.innerHTML += `
-                        <tr class="border-b border-gray-800">
-                            <td class="p-2 text-left pl-4 flex items-center gap-2">
-                                <img src="${bC}" class="w-8 h-8 rounded border border-gray-600 bg-black">
-                                <span class="font-bold text-gray-300 w-8">${r}</span>
-                            </td>
-                            <td class="p-2 font-mono">${bSt.k}/${bSt.d}/${bSt.a}</td>
-                            <td class="p-2 border-r border-gray-700 relative">
-                                <div class="absolute left-2 top-2 bottom-2 bg-lck-blue/20 rounded z-0" style="width: ${bW}%"></div>
-                                <span class="relative z-10">${bSt.dmg.toLocaleString()}</span>
-                            </td>
-                            <td class="p-2 text-right pr-4 flex items-center justify-end gap-2">
-                                <span class="font-bold text-gray-300 w-8">${r}</span>
-                                <img src="${rC}" class="w-8 h-8 rounded border border-gray-600 bg-black">
-                            </td>
-                            <td class="p-2 font-mono">${rSt.k}/${rSt.d}/${rSt.a}</td>
-                            <td class="p-2 relative">
-                                <div class="absolute right-2 top-2 bottom-2 bg-lck-red/20 rounded z-0" style="width: ${rW}%"></div>
-                                <span class="relative z-10">${rSt.dmg.toLocaleString()}</span>
-                            </td>
-                        </tr>
+                        <div class="flex items-center w-full">
+                            <!-- Blue Side -->
+                            <div class="flex items-center w-[45%] gap-4">
+                                <img src="${bC}" class="w-12 h-12 rounded border-2 border-gray-600 bg-black shrink-0">
+                                <div class="flex-1 flex flex-col justify-center">
+                                    <div class="flex justify-between items-end mb-1">
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="font-bold text-gray-200 text-sm truncate max-w-[120px]">${bPlayer.name}</span>
+                                            <span class="text-[10px] text-gray-500 font-mono tracking-tighter">${bSt.k}/${bSt.d}/${bSt.a}</span>
+                                        </div>
+                                        <span class="font-black text-white text-base">${dispBDmg}</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-gray-800 rounded-sm overflow-hidden flex justify-start">
+                                        <div class="h-full bg-[#7B82FF] rounded-sm" style="width: ${bW}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Role Center -->
+                            <div class="w-[10%] text-center font-black text-gray-600 tracking-widest text-xs">${r}</div>
+
+                            <!-- Red Side -->
+                            <div class="flex items-center w-[45%] gap-4 flex-row-reverse text-right">
+                                <img src="${rC}" class="w-12 h-12 rounded border-2 border-gray-600 bg-black shrink-0">
+                                <div class="flex-1 flex flex-col justify-center">
+                                    <div class="flex justify-between items-end mb-1 flex-row-reverse">
+                                        <div class="flex items-baseline gap-2 flex-row-reverse">
+                                            <span class="font-bold text-gray-200 text-sm truncate max-w-[120px]">${rPlayer.name}</span>
+                                            <span class="text-[10px] text-gray-500 font-mono tracking-tighter">${rSt.k}/${rSt.d}/${rSt.a}</span>
+                                        </div>
+                                        <span class="font-black text-white text-base">${dispRDmg}</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-gray-800 rounded-sm overflow-hidden flex justify-end">
+                                        <div class="h-full bg-[#FF7B82] rounded-sm" style="width: ${rW}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     `;
                 });
                 
@@ -2812,7 +2832,6 @@
             },
 
             startNextSet() {
-                // 완전히 인터벌을 멈추고 뷰를 숨긴 다음 강제 재시작 
                 clearInterval(this.state.interval);
                 document.getElementById('view-result').classList.add('hidden');
                 
