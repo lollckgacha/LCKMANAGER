@@ -213,6 +213,29 @@
             </div>
         </div>
 
+        <!-- In-Match Roster Modal -->
+        <div id="modal-inmatch-roster" class="hidden absolute inset-0 bg-black/95 z-[300] flex items-center justify-center backdrop-blur-sm p-4">
+            <div class="bg-gray-900 border border-gray-600 p-4 md:p-6 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                <div class="flex justify-between items-center border-b border-gray-700 pb-2 md:pb-4 mb-4 shrink-0">
+                    <h3 class="text-xl md:text-2xl font-bold text-white tracking-widest"><i class="fa-solid fa-users mr-2 text-lck-accent"></i>선발 로스터 교체</h3>
+                    <button onclick="app.closeInMatchRoster()" class="text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
+                </div>
+                <div class="flex flex-col gap-4 overflow-y-auto flex-1 pr-2">
+                    <div>
+                        <h4 class="text-sm text-gray-400 mb-2 font-bold">출전 (드래그 앤 드롭)</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2" id="inmatch-roster-starters"></div>
+                    </div>
+                    <div class="pt-4 border-t border-gray-800 mt-2">
+                        <h4 class="text-sm text-gray-400 mb-2 font-bold">서브 (교체 선수)</h4>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2" id="inmatch-roster-subs"></div>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end shrink-0 pt-4 border-t border-gray-800">
+                    <button onclick="app.closeInMatchRoster()" class="bg-lck-accent text-black font-bold py-2.5 px-8 rounded hover:bg-yellow-500 transition shadow-[0_0_10px_rgba(200,155,60,0.4)]">변경 완료</button>
+                </div>
+            </div>
+        </div>
+
         <!-- SCREEN 1: TITLE -->
         <div id="screen-title" class="screen items-center justify-center bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-20 bg-cover relative p-4">
             <div class="absolute inset-0 bg-black/80"></div>
@@ -634,11 +657,14 @@
                             </div>
 
                             <!-- Bottom Buttons -->
-                            <div class="w-full mt-2 md:mt-4 shrink-0">
-                                <button id="btn-res-next-set" onclick="match.startNextSet(); sfx.play('click');" class="bg-lck-blue text-white font-bold py-2.5 md:py-3 px-8 md:px-12 rounded w-full hover:bg-blue-500 mb-1 md:mb-2 shadow-[0_0_10px_rgba(11,198,227,0.4)] transition text-sm md:text-base">
+                            <div class="w-full mt-2 md:mt-4 shrink-0 flex flex-col md:flex-row gap-2">
+                                <button id="btn-res-roster" onclick="app.showInMatchRoster(); sfx.play('click');" class="hidden bg-gray-700 text-white font-bold py-2.5 md:py-3 px-4 md:px-8 rounded hover:bg-gray-600 shadow-[0_0_10px_rgba(0,0,0,0.4)] transition text-sm md:text-base">
+                                    <i class="fa-solid fa-users mr-1"></i> 로스터 교체
+                                </button>
+                                <button id="btn-res-next-set" onclick="match.startNextSet(); sfx.play('click');" class="hidden flex-1 bg-lck-blue text-white font-bold py-2.5 md:py-3 px-8 md:px-12 rounded hover:bg-blue-500 shadow-[0_0_10px_rgba(11,198,227,0.4)] transition text-sm md:text-base">
                                     다음 세트 진입
                                 </button>
-                                <button id="btn-res-end-match" onclick="app.endMatch(); sfx.play('click');" class="hidden bg-lck-accent text-black font-bold py-2.5 md:py-3 px-8 md:px-12 rounded w-full hover:bg-yellow-500 shadow-[0_0_10px_rgba(200,155,60,0.4)] transition text-sm md:text-base">
+                                <button id="btn-res-end-match" onclick="app.endMatch(); sfx.play('click');" class="hidden w-full bg-lck-accent text-black font-bold py-2.5 md:py-3 px-8 md:px-12 rounded hover:bg-yellow-500 shadow-[0_0_10px_rgba(200,155,60,0.4)] transition text-sm md:text-base">
                                     매치 종료 및 대시보드 복귀
                                 </button>
                             </div>
@@ -820,7 +846,6 @@
                 const p = window.DATA.players.find(p=>p.id===id);
                 return p || { name: 'Player', role: fallbackRole, img: '', tier: 1 };
             },
-            // 새롭게 추가된 헬퍼 함수: 팀과 포지션을 기준으로 선수를 가져오되, 플레이어 팀의 경우 로스터를 반영
             getPlayerByRole: (teamId, role) => {
                 if (teamId === state.playerTeamId && state.roster && state.roster.starters) {
                     const pId = state.roster.starters[role];
@@ -946,7 +971,6 @@
                 const sidebar = document.getElementById('main-sidebar');
                 const advanceBtn = document.getElementById('btn-advance-time');
                 if (sidebar) {
-                    // 매치나 밴픽 화면일때는 사이드바와 "계속 진행" 버튼 숨김
                     if (tabId === 'draft' || tabId === 'match') {
                         sidebar.classList.add('hidden');
                         sidebar.classList.remove('flex');
@@ -1478,6 +1502,87 @@
                     if(!state.roster.subs.includes(pId)) state.roster.subs.push(pId);
                 }
                 this.renderRoster();
+            },
+
+            showInMatchRoster() {
+                document.getElementById('modal-inmatch-roster').classList.remove('hidden');
+                this.renderInMatchRoster();
+            },
+            closeInMatchRoster() {
+                sfx.play('click');
+                for(const r of window.DATA.roles) {
+                    if(!state.roster.starters[r]) {
+                        this.toast(`${r} 포지션이 비어있습니다. 출전 선수를 배치해주세요.`);
+                        return;
+                    }
+                }
+                document.getElementById('modal-inmatch-roster').classList.add('hidden');
+                this.renderRoster(); // sync main roster view
+            },
+            renderInMatchRoster() {
+                const renderCard = (pId, isStarter, role) => {
+                    const p = utils.getPlayer(pId, role);
+                    if(!pId) return `<div class="bg-gray-900 border border-gray-700 h-28 md:h-36 rounded flex items-center justify-center text-[10px] md:text-xs text-gray-500 drop-zone" data-role="${role}" ondragover="event.preventDefault()" ondrop="app.onInMatchDrop(event, '${role}', true)">빈 슬롯</div>`;
+                    
+                    const pc = state.playerConditions[p.id];
+                    const condId = pc ? pc.cond : (p.cond || 'normal');
+                    const cond = window.DATA.conditions.find(c=>c.id===condId) || window.DATA.conditions[2];
+                    
+                    const imgHtml = p.img ? `<img src="${p.img}" class="w-8 h-8 md:w-12 md:h-12 rounded-full object-cover mb-1 border-2 border-gray-600 bg-gray-700" onerror="this.outerHTML='<i class=&quot;fa-solid fa-user text-lg md:text-2xl text-gray-400 mb-1&quot;></i>'">` : `<i class="fa-solid fa-user text-lg md:text-2xl text-gray-400 mb-1"></i>`;
+                    let disabledClass = condId === 'injured' ? 'grayscale opacity-70 border-red-500' : (isStarter ? 'border-lck-blue' : 'border-gray-600');
+
+                    return `
+                        <div class="bg-gray-800 border-2 ${disabledClass} rounded p-1.5 flex flex-col items-center player-card h-28 md:h-36 justify-center relative" draggable="true" ondragstart="app.onDragStart(event, '${p.id}')">
+                            <div class="absolute top-1 left-1 md:left-2 text-[10px] md:text-xs font-black text-gray-600">${p.role}</div>
+                            ${imgHtml}
+                            <div class="font-bold text-white text-[10px] md:text-xs truncate w-full text-center">${p.name}</div>
+                            <div class="mt-0.5">${utils.getStarHtml(p)}</div>
+                            <div class="text-[8px] md:text-[9px] mt-1 font-bold ${cond.color} bg-black/50 px-1.5 py-0.5 rounded-full">${cond.label}</div>
+                            ${condId === 'injured' ? `<div class="absolute inset-0 bg-red-900/30 flex items-center justify-center pointer-events-none rounded"><i class="fa-solid fa-ban text-xl md:text-3xl text-red-500/50"></i></div>` : ''}
+                        </div>
+                    `;
+                };
+
+                const startersEl = document.getElementById('inmatch-roster-starters');
+                startersEl.innerHTML = '';
+                window.DATA.roles.forEach(r => {
+                    const zone = document.createElement('div');
+                    zone.className = 'drop-zone p-1 rounded h-32 md:h-40';
+                    zone.dataset.role = r;
+                    zone.ondragover = e => e.preventDefault();
+                    zone.ondrop = e => app.onInMatchDrop(e, r, true);
+                    zone.innerHTML = renderCard(state.roster.starters[r], true, r);
+                    startersEl.appendChild(zone);
+                });
+
+                const subsEl = document.getElementById('inmatch-roster-subs');
+                subsEl.innerHTML = '';
+                state.roster.subs.forEach(id => {
+                    const wrap = document.createElement('div');
+                    wrap.ondragover = e => e.preventDefault();
+                    wrap.ondrop = e => app.onInMatchDrop(e, 'SUB', false);
+                    wrap.innerHTML = renderCard(id, false, utils.getPlayer(id).role);
+                    subsEl.appendChild(wrap);
+                });
+            },
+            onInMatchDrop(e, targetRole, isStarterZone) {
+                e.preventDefault();
+                const pId = e.dataTransfer.getData('text');
+                const p = utils.getPlayer(pId);
+                const pc = state.playerConditions[pId];
+                if (isStarterZone && (pc && pc.cond === 'injured')) { this.toast('부상 선수는 출전할 수 없습니다.'); return; }
+                sfx.play('click');
+                const existingStarterId = state.roster.starters[targetRole];
+                
+                if(isStarterZone) {
+                    state.roster.starters[targetRole] = pId;
+                    state.roster.subs = state.roster.subs.filter(id => id !== pId);
+                    if(existingStarterId && existingStarterId !== pId) state.roster.subs.push(existingStarterId);
+                } else {
+                    Object.keys(state.roster.starters).forEach(k => { if(state.roster.starters[k] === pId) state.roster.starters[k] = null; });
+                    if(!state.roster.subs.includes(pId)) state.roster.subs.push(pId);
+                }
+                this.renderInMatchRoster();
             },
 
             renderStandings() {
@@ -2059,7 +2164,6 @@
                         let cImgHtml = `<div class="w-10 h-10 md:w-12 md:h-12 rounded border border-gray-700 border-dashed bg-gray-800/30 flex items-center justify-center opacity-50 shrink-0"><span class="text-[6px] md:text-[8px] text-gray-400 font-bold">PICK</span></div>`;
                         if (c) cImgHtml = `<img src="${utils.getChampImg(c.id)}" class="w-10 h-10 md:w-12 md:h-12 rounded border border-gray-400 bg-black object-cover shadow-lg shrink-0">`;
 
-                        // 모바일 가로 렌더링 호환 클래스
                         if (side === 'B') {
                             el.innerHTML += `
                                 <div class="bg-gradient-to-r md:from-gray-800 to-transparent border-b-2 md:border-b-0 md:border-l-4 ${color} p-1 md:p-1.5 rounded flex flex-col md:flex-row items-center gap-1 md:gap-2 shrink-0 w-[60px] md:w-auto">
@@ -2559,10 +2663,12 @@
                 if(isSeriesOver) {
                     document.getElementById('res-feedback-section').classList.add('hidden');
                     document.getElementById('btn-res-next-set').classList.add('hidden');
+                    document.getElementById('btn-res-roster').classList.add('hidden');
                     document.getElementById('btn-res-end-match').classList.remove('hidden');
                 } else {
                     document.getElementById('res-feedback-section').classList.remove('hidden');
                     document.getElementById('btn-res-next-set').classList.remove('hidden');
+                    document.getElementById('btn-res-roster').classList.remove('hidden');
                     document.getElementById('btn-res-end-match').classList.add('hidden');
                 }
             },
@@ -2572,9 +2678,14 @@
                 document.getElementById('view-result').classList.add('hidden');
                 state.activeSeries.set++;
                 
+                // 플레이어가 이전 세트에서 승리했는지 확인합니다.
                 const isPlayerWin = document.getElementById('res-title').innerText === 'VICTORY';
-                if (isPlayerWin) app.showSideSelectModal();
-                else {
+                
+                // 플레이어가 패배했을 경우 직접 진영을 선택합니다.
+                if (!isPlayerWin) {
+                    app.showSideSelectModal();
+                } else {
+                    // 플레이어가 승리했을 경우, 패배한 AI(적)가 진영을 선택합니다. (여기서는 랜덤으로 처리)
                     const enemyId = state.activeSeries.match.t1 === state.playerTeamId ? state.activeSeries.match.t2 : state.activeSeries.match.t1;
                     const aiPickBlue = Math.random() < 0.5;
                     app.initDraft(aiPickBlue ? enemyId : state.playerTeamId, aiPickBlue ? state.playerTeamId : enemyId);
