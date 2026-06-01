@@ -23,7 +23,6 @@
         }
     </script>
     <style>
-        /* 기본 바디 설정 (16:9 제한 해제, 풀스크린 유동적 배치) */
         body { 
             background-color: #000; 
             color: #f0e6d2; 
@@ -36,7 +35,7 @@
             width: 100vw; 
             overflow: hidden; 
             user-select: none; 
-            touch-action: manipulation; /* 모바일 더블탭 줌 방지 */
+            touch-action: manipulation;
         }
 
         #app-container {
@@ -60,18 +59,18 @@
         @media (min-width: 768px) { .view-section { padding: 1.5rem; } }
         .view-section.active { display: flex; flex-direction: column; }
 
-        /* Toast */
+        /* Toast notifications styling */
         #ui-toast { transition: opacity 0.3s ease, transform 0.3s ease; }
         .toast-hidden { opacity: 0; transform: translate(-50%, -20px); pointer-events: none; }
         .toast-visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
 
-        /* Roster Drag & Drop */
+        /* Drag and Drop UI components styling */
         .drop-zone { border: 2px dashed transparent; transition: all 0.2s; }
         .drop-zone.drag-over { border-color: #c89b3c; background-color: rgba(200, 155, 60, 0.1); }
         .player-card { cursor: grab; transition: transform 0.1s; }
         .player-card:active { cursor: grabbing; transform: scale(0.98); }
 
-        /* Draft */
+        /* Champion Selection and draft elements styling */
         .champ-portrait { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid #333; }
         .champ-item { cursor: pointer; transition: all 0.2s; position: relative; }
         .champ-item:hover { transform: translateY(-2px); border-color: #c89b3c; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
@@ -85,7 +84,6 @@
         @media (min-width: 768px) { .cal-cell { min-height: 100px; } }
         .cal-today { border-color: #c89b3c !important; background-color: rgba(200,155,60,0.1); }
 
-        /* Draft Animation Overlay */
         #bp-anim-overlay { transition: opacity 0.3s; opacity: 0; pointer-events: none; }
         #bp-anim-overlay.active { opacity: 1; pointer-events: auto; }
         #bp-anim-card { transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s, border-color 0.3s; border: 4px solid transparent; border-radius: 8px; overflow: hidden; background-color: #000; }
@@ -99,12 +97,13 @@
         .anim-glow-pick { border-color: #0bc6e3 !important; box-shadow: 0 0 40px rgba(11, 198, 227, 0.9) !important; }
         @keyframes slashAnim { 0% { width: 0; opacity: 0; } 100% { width: 150%; opacity: 1; left: -25%; top: 50%; } }
 
-        /* Announcer & Ingame Logs */
+        /* In-game live announcer styles */
         #announcer-container { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); z-index: 60; text-align: center; pointer-events: none; display: flex; flex-direction: column; gap: 1rem; align-items: center;}
         .announcer-text { font-size: 2.5rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 0.1em; text-shadow: 0 0 10px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,1); animation: zoomInOut 3s ease-in-out forwards; }
         @media (min-width: 768px) { .announcer-text { font-size: 4rem; text-shadow: 0 0 20px rgba(0,0,0,1), 0 0 40px rgba(0,0,0,1); } }
         @keyframes zoomInOut { 0% { transform: scale(0.5); opacity: 0; } 10% { transform: scale(1); opacity: 1; } 80% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.1); opacity: 0; } }
 
+        /* Real-time battle feed kill log layout */
         .kill-log-wrapper { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.5rem; z-index: 50; width: 200px; pointer-events: none; }
         #kill-log-left { left: 10px; align-items: flex-start; top: 15%; right: auto; }
         #kill-log-right { right: 10px; align-items: flex-end; top: 15%; left: auto; }
@@ -115,14 +114,13 @@
             #kill-log-right { left: calc(50% + 220px); right: auto; align-items: flex-start; }
         }
 
-        .kill-log-item { display: flex; justify-content: center; align-items: center; gap: 0.5rem; background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(20,20,20,0.9) 50%, rgba(0,0,0,0.7) 100%); padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid #444; animation: slideDown 0.3s ease-out, fadeOut 0.5s ease-in 3.5s forwards; box-shadow: 0 4px 10px rgba(0,0,0,0.7); backdrop-filter: blur(4px);}
+        .kill-log-item { display: flex; justify-content: center; align-items: center; gap: 0.5rem; background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(20,20,20,0.9) 50%, rgba(0,0,0,0.7) 100%); padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid #444; animation: slideDown 0.3s ease-out, fadeOut 0.5s ease-in 3.5s forwards; box-shadow: 0 4px 10px rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
         .kill-log-item.blue-kill { border-color: #0bc6e3; box-shadow: inset 0 0 15px rgba(11,198,227,0.3); flex-direction: row; }
         .kill-log-item.red-kill { border-color: #ff4e50; box-shadow: inset 0 0 15px rgba(255,78,80,0.3); flex-direction: row-reverse; }
         @media (max-width: 767px) { .kill-log-item img { width: 24px; height: 24px; } }
         @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes fadeOut { to { opacity: 0; visibility: hidden; margin-top: -50px; } }
 
-        /* Minimap Tower Pulse */
         @keyframes towerDestroy { 0% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); } 50% { transform: translate(-50%, -50%) scale(2.5); filter: brightness(2); background-color: white;} 100% { transform: translate(-50%, -50%) scale(0); opacity: 0; display: none; } }
         .minimap-tower.destroyed { animation: towerDestroy 0.8s ease-out forwards; pointer-events: none; }
         .minimap-tower { position: absolute; transform: translate(-50%, -50%); transition: opacity 0.5s; z-index: 10; }
@@ -148,7 +146,6 @@
         .ingame-portrait { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #555; transition: filter 0.3s; }
         @media (min-width: 768px) { .ingame-portrait { width: 48px; height: 48px; } }
 
-        /* Responsive specific overrides */
         @media (max-width: 767px) {
             .mobile-hide-kda .flex-1 { display: none; }
             .mobile-panel-sm { width: auto !important; padding: 0.25rem !important; background: rgba(0,0,0,0.6) !important; border: none !important;}
@@ -157,6 +154,7 @@
 </head>
 <body>
     <div id="app-container">
+        <!-- Toast feedback element -->
         <div id="ui-toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 md:px-6 md:py-3 text-sm md:text-base rounded-lg shadow-xl font-bold text-white text-center toast-hidden whitespace-nowrap"></div>
 
         <!-- SCREEN 0: LOADING -->
@@ -173,7 +171,7 @@
             </div>
         </div>
 
-        <!-- Custom Match Confirm Modal -->
+        <!-- Match Confirmation Modal -->
         <div id="modal-match-confirm" class="hidden absolute inset-0 bg-black/60 z-[200] flex items-center justify-center backdrop-blur-sm transition-all duration-300 p-4">
             <div class="bg-lck-panel border-2 border-lck-accent p-6 md:p-8 rounded-xl w-full max-w-sm md:max-w-[450px] text-center shadow-[0_0_30px_rgba(200,155,60,0.3)] flex flex-col items-center">
                 <i class="fa-solid fa-trophy text-4xl md:text-5xl text-lck-accent mb-4"></i>
@@ -213,7 +211,7 @@
             </div>
         </div>
 
-        <!-- In-Match Roster Modal -->
+        <!-- In-Match Inter-set Roster Swap Modal -->
         <div id="modal-inmatch-roster" class="hidden absolute inset-0 bg-black/95 z-[300] flex items-center justify-center backdrop-blur-sm p-4">
             <div class="bg-gray-900 border border-gray-600 p-4 md:p-6 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
                 <div class="flex justify-between items-center border-b border-gray-700 pb-2 md:pb-4 mb-4 shrink-0">
@@ -226,7 +224,7 @@
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2" id="inmatch-roster-starters"></div>
                     </div>
                     <div class="pt-4 border-t border-gray-800 mt-2">
-                        <h4 class="text-sm text-gray-400 mb-2 font-bold">서브 (교체 선수)</h4>
+                        <h4 class="text-sm text-gray-400 mb-2 font-bold">서브 및 교체 대기 (포지션 순 정렬)</h4>
                         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2" id="inmatch-roster-subs"></div>
                     </div>
                 </div>
@@ -236,7 +234,7 @@
             </div>
         </div>
 
-        <!-- SCREEN 1: TITLE -->
+        <!-- SCREEN 1: TITLE SCREEN -->
         <div id="screen-title" class="screen items-center justify-center bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-20 bg-cover relative p-4">
             <div class="absolute inset-0 bg-black/80"></div>
             <div class="z-10 flex flex-col items-center justify-center h-full w-full gap-3 md:gap-4 text-center pb-8 md:pb-12">
@@ -308,7 +306,7 @@
             </header>
 
             <div class="flex flex-1 overflow-hidden flex-col md:flex-row">
-                <!-- Main Content Area (Order 1 on mobile, Order 2 on desktop) -->
+                <!-- Main Content Area -->
                 <main class="flex-1 bg-[#0a0a0c] overflow-hidden flex flex-col relative order-1 md:order-2 w-full" id="main-content">
                     
                     <!-- Tab: Dashboard -->
@@ -355,7 +353,7 @@
                         </div>
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-4 shrink-0" id="roster-starters"></div>
                         <div class="mt-2 md:mt-4 pt-2 md:pt-4 border-t border-gray-800 flex-1 overflow-y-auto">
-                            <h2 class="text-lg md:text-xl font-bold text-white mb-2 md:mb-4">2군/서브 로스터</h2>
+                            <h2 class="text-lg md:text-xl font-bold text-white mb-2 md:mb-4">2군 및 서브 로스터 (포지션 순 정렬)</h2>
                             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-3" id="roster-subs"></div>
                         </div>
                     </section>
@@ -458,7 +456,6 @@
 
                             <!-- Draft Main Area: Responsive Layout (Column on mobile, Row on Desktop) -->
                             <div class="flex-1 flex flex-col md:flex-row gap-2 md:gap-4 overflow-hidden">
-                                
                                 <!-- Blue Team Column/Row -->
                                 <div class="w-full md:w-64 flex flex-row md:flex-col gap-2 h-auto md:h-full shrink-0">
                                     <div class="bg-gray-900/80 border border-lck-blue/30 rounded p-1.5 md:p-2 flex gap-1 md:grid md:grid-cols-3 content-start shrink-0 overflow-x-auto md:overflow-visible h-14 md:h-24 md:h-auto items-center md:items-start" id="draft-blue-bans"></div>
@@ -521,7 +518,6 @@
 
                     <!-- Tab: In-Game Match -->
                     <section id="view-match" class="view-section p-0 h-full relative bg-[#0a0a0c] overflow-hidden flex-col">
-                        
                         <!-- Top Scoreboard -->
                         <div class="absolute top-0 w-full h-auto min-h-[60px] md:h-16 flex justify-center z-30 font-bold text-white shadow-lg border-b border-gray-800 bg-black/85 backdrop-blur-sm px-2 md:px-0">
                             <!-- Blue Side -->
@@ -575,7 +571,7 @@
                             </div>
                         </div>
 
-                        <!-- Ingame Side Panels (Responsive placement) -->
+                        <!-- Ingame Side Panels -->
                         <div class="absolute left-0 top-[80px] md:top-16 bottom-[100px] md:bottom-0 w-12 md:w-64 bg-transparent md:bg-gradient-to-r from-black/95 to-transparent flex flex-col justify-center gap-1 md:gap-1.5 pl-1 md:pl-4 z-10 pointer-events-none mobile-hide-kda" id="match-panel-blue"></div>
                         <div class="absolute right-0 top-[80px] md:top-16 bottom-[100px] md:bottom-0 w-12 md:w-64 bg-transparent md:bg-gradient-to-l from-black/95 to-transparent flex flex-col justify-center gap-1 md:gap-1.5 pr-1 md:pr-4 z-10 pointer-events-none items-end text-right mobile-hide-kda" id="match-panel-red"></div>
 
@@ -590,7 +586,6 @@
                             
                             <!-- Minimap Container -->
                             <div class="z-10 relative flex flex-col items-center mt-[-2rem] md:mt-[-4rem]">
-                                <!-- Aspect ratio scaling for map -->
                                 <div id="minimap-container" class="w-[85vw] max-w-[360px] md:max-w-[400px] aspect-square rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.8)] md:shadow-[0_0_40px_rgba(0,0,0,0.9)] border-2 md:border-4 border-gray-800 relative bg-[url('https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png')] bg-cover bg-center">
                                 </div>
                                 <!-- Speed Controls -->
@@ -604,7 +599,7 @@
                             <!-- Bottom Text Log -->
                             <div class="absolute bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[600px] h-24 md:h-32 bg-black/90 border border-gray-700 rounded-lg flex flex-col z-20 shadow-xl pointer-events-none">
                                 <div class="p-1 md:p-1.5 border-b border-gray-700 text-[10px] md:text-xs text-gray-400 flex justify-between items-center shrink-0 bg-gray-900/80 rounded-t-lg">
-                                    <span class="ml-2">실시간 로그 (세트 <span id="log-set-num">1</span>)</span>
+                                    <span class="ml-2">실시간 로그 (세트 <span id="log-set-num">1</span> / BO<span id="log-bo-num">3</span>)</span>
                                     <span class="text-red-500 animate-pulse font-bold tracking-widest mr-2"><i class="fa-solid fa-circle text-[6px] md:text-[8px] align-middle mr-1"></i>LIVE</span>
                                 </div>
                                 <div class="flex-1 p-1.5 md:p-2 overflow-y-auto flex flex-col gap-0.5 md:gap-1 font-mono text-[10px] md:text-xs pointer-events-auto" id="match-log"></div>
@@ -612,7 +607,7 @@
                         </div>
                     </section>
 
-                    <!-- Match Result Modal -->
+                    <!-- Match Result Screen -->
                     <div id="view-result" class="hidden absolute inset-0 bg-black/95 z-50 flex items-center justify-center backdrop-blur-sm p-2 md:p-4">
                         <div class="bg-lck-panel border border-gray-700 p-4 md:p-8 rounded-xl w-full max-w-[1000px] max-h-[95vh] flex flex-col items-center shadow-2xl relative">
                             
@@ -626,7 +621,7 @@
                                         <div id="res-blue-score" class="text-3xl md:text-5xl font-bold text-lck-blue">0</div>
                                     </div>
                                     <div class="w-1/3 text-center flex flex-col items-center">
-                                        <div class="text-[10px] md:text-xs text-gray-500 mb-0.5 md:mb-1 hidden sm:block">SERIES SCORE</div>
+                                        <div class="text-[10px] md:text-xs text-gray-500 mb-0.5 md:mb-1 hidden sm:block" id="res-series-bo-text">SERIES SCORE (BO3)</div>
                                         <div id="res-series-score" class="text-xl md:text-3xl font-bold text-white tracking-widest mb-1">0 : 0</div>
                                         <div class="text-[9px] md:text-[11px] text-gray-600 bg-gray-800 px-2 py-0.5 md:px-3 md:py-1 rounded-full border border-gray-700">TIME: <span id="res-time">00:00</span></div>
                                     </div>
@@ -656,7 +651,7 @@
                                 </div>
                             </div>
 
-                            <!-- Bottom Buttons -->
+                            <!-- Bottom Buttons on match end or inter-set -->
                             <div class="w-full mt-2 md:mt-4 shrink-0 flex flex-col md:flex-row gap-2">
                                 <button id="btn-res-roster" onclick="app.showInMatchRoster(); sfx.play('click');" class="hidden bg-gray-700 text-white font-bold py-2.5 md:py-3 px-4 md:px-8 rounded hover:bg-gray-600 shadow-[0_0_10px_rgba(0,0,0,0.4)] transition text-sm md:text-base">
                                     <i class="fa-solid fa-users mr-1"></i> 로스터 교체
@@ -673,7 +668,7 @@
                     </div>
                 </main>
 
-                <!-- Sidebar Navigation (Responsive: Bottom bar on Mobile, Sidebar on Desktop) -->
+                <!-- Sidebar Navigation -->
                 <aside id="main-sidebar" class="bg-lck-panel border-t border-gray-800 flex shrink-0 transition-all duration-300 w-full h-[60px] flex-row order-last z-50 md:order-none md:w-64 md:h-full md:flex-col md:border-r md:border-t-0 p-1 md:p-4 gap-1 md:gap-2 overflow-x-auto md:overflow-x-visible items-center md:items-stretch">
                     <button onclick="app.switchTab('dashboard')" class="nav-btn active flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 p-2 md:p-3 rounded bg-gray-800 text-white font-medium transition text-center md:text-left flex-1 md:flex-none min-w-[60px]">
                         <i class="fa-solid fa-house text-lg md:text-base w-auto md:w-5 text-center"></i> <span class="text-[10px] md:text-base hidden sm:inline md:inline">홈</span>
@@ -1257,7 +1252,12 @@
                             this.addNews(`${rp.name} 선수가 훈련 중 부상을 입었습니다. (예상 복귀: ${utils.formatDate(recDate)})`, 'error');
                             
                             for(const r in state.roster.starters) {
-                                if(state.roster.starters[r] === rp.id) state.roster.starters[r] = null;
+                                if(state.roster.starters[r] === rp.id) {
+                                    state.roster.starters[r] = null;
+                                }
+                            }
+                            if(!state.roster.subs.includes(rp.id)) {
+                                state.roster.subs.push(rp.id);
                             }
                         } else {
                             state.playerConditions[rp.id] = { cond: 'bad', until: null };
@@ -1449,7 +1449,7 @@
                     let disabledClass = condId === 'injured' ? 'grayscale opacity-70 border-red-500' : (isStarter ? 'border-lck-blue' : 'border-gray-600');
 
                     return `
-                        <div class="bg-gray-800 border-2 ${disabledClass} rounded p-1.5 md:p-3 flex flex-col items-center player-card h-32 md:h-44 justify-center relative" draggable="true" ondragstart="app.onDragStart(event, '${p.id}')">
+                        <div class="bg-gray-800 border-2 ${disabledClass} rounded p-1.5 md:p-3 flex flex-col items-center player-card h-32 md:h-44 justify-center relative" draggable="${condId !== 'injured'}" ondragstart="app.onDragStart(event, '${p.id}')">
                             <div class="absolute top-1 left-1 md:left-2 text-[10px] md:text-xs font-black text-gray-600">${p.role}</div>
                             ${imgHtml}
                             <div class="font-bold text-white text-[10px] md:text-sm truncate w-full text-center">${p.name}</div>
@@ -1472,9 +1472,20 @@
                     startersEl.appendChild(zone);
                 });
 
+                // Subs are sorted by TOP -> JUG -> MID -> BOT -> SUP then tier descending
+                const roleOrder = { 'TOP': 1, 'JUG': 2, 'MID': 3, 'BOT': 4, 'SUP': 5 };
+                const sortedSubs = [...state.roster.subs].sort((a, b) => {
+                    const pA = utils.getPlayer(a);
+                    const pB = utils.getPlayer(b);
+                    if (roleOrder[pA.role] !== roleOrder[pB.role]) {
+                        return (roleOrder[pA.role] || 99) - (roleOrder[pB.role] || 99);
+                    }
+                    return pB.tier - pA.tier;
+                });
+
                 const subsEl = document.getElementById('roster-subs');
                 subsEl.innerHTML = '';
-                state.roster.subs.forEach(id => {
+                sortedSubs.forEach(id => {
                     const wrap = document.createElement('div');
                     wrap.ondragover = e => e.preventDefault();
                     wrap.ondrop = e => app.onDrop(e, 'SUB', false);
@@ -1517,8 +1528,9 @@
                     }
                 }
                 document.getElementById('modal-inmatch-roster').classList.add('hidden');
-                this.renderRoster(); // sync main roster view
+                this.renderRoster(); 
             },
+            
             renderInMatchRoster() {
                 const renderCard = (pId, isStarter, role) => {
                     const p = utils.getPlayer(pId, role);
@@ -1532,7 +1544,7 @@
                     let disabledClass = condId === 'injured' ? 'grayscale opacity-70 border-red-500' : (isStarter ? 'border-lck-blue' : 'border-gray-600');
 
                     return `
-                        <div class="bg-gray-800 border-2 ${disabledClass} rounded p-1.5 flex flex-col items-center player-card h-28 md:h-36 justify-center relative" draggable="true" ondragstart="app.onDragStart(event, '${p.id}')">
+                        <div class="bg-gray-800 border-2 ${disabledClass} rounded p-1.5 flex flex-col items-center player-card h-28 md:h-36 justify-center relative" draggable="${condId !== 'injured'}" ondragstart="app.onDragStart(event, '${p.id}')">
                             <div class="absolute top-1 left-1 md:left-2 text-[10px] md:text-xs font-black text-gray-600">${p.role}</div>
                             ${imgHtml}
                             <div class="font-bold text-white text-[10px] md:text-xs truncate w-full text-center">${p.name}</div>
@@ -1555,9 +1567,20 @@
                     startersEl.appendChild(zone);
                 });
 
+                // Sort subs specifically for match result screen modal
+                const roleOrder = { 'TOP': 1, 'JUG': 2, 'MID': 3, 'BOT': 4, 'SUP': 5 };
+                const sortedSubs = [...state.roster.subs].sort((a, b) => {
+                    const pA = utils.getPlayer(a);
+                    const pB = utils.getPlayer(b);
+                    if (roleOrder[pA.role] !== roleOrder[pB.role]) {
+                        return (roleOrder[pA.role] || 99) - (roleOrder[pB.role] || 99);
+                    }
+                    return pB.tier - pA.tier;
+                });
+
                 const subsEl = document.getElementById('inmatch-roster-subs');
                 subsEl.innerHTML = '';
-                state.roster.subs.forEach(id => {
+                sortedSubs.forEach(id => {
                     const wrap = document.createElement('div');
                     wrap.ondragover = e => e.preventDefault();
                     wrap.ondrop = e => app.onInMatchDrop(e, 'SUB', false);
@@ -1750,7 +1773,12 @@
                             ${utils.getLogoHtml(m.t1, 'w-8 h-8 md:w-12 md:h-12')}
                             <span class="text-sm md:text-2xl font-bold text-white truncate">${m.t1}</span>
                         </div>
-                        <div class="text-xl md:text-4xl font-black text-gray-500 w-1/3 text-center"><span class="${m.resT1>m.resT2?'text-lck-blue':''}">${m.resT1}</span> : <span class="${m.resT2>m.resT1?'text-lck-red':''}">${m.resT2}</span></div>
+                        <div class="text-xl md:text-4xl font-black text-gray-500 w-1/3 text-center flex flex-col items-center">
+                            <div class="text-[10px] md:text-xs text-gray-400 font-bold mb-1 tracking-widest">BEST OF ${m.bo}</div>
+                            <div>
+                                <span class="${m.resT1>m.resT2?'text-lck-blue':''}">${m.resT1}</span> : <span class="${m.resT2>m.resT1?'text-lck-red':''}">${m.resT2}</span>
+                            </div>
+                        </div>
                         <div class="flex items-center gap-2 md:gap-3 flex-row-reverse w-1/3">
                             ${utils.getLogoHtml(m.t2, 'w-8 h-8 md:w-12 md:h-12')}
                             <span class="text-sm md:text-2xl font-bold text-white truncate">${m.t2}</span>
@@ -2237,6 +2265,7 @@
                 });
 
                 document.getElementById('log-set-num').innerText = state.activeSeries.set;
+                document.getElementById('log-bo-num').innerText = state.activeSeries.match.bo;
                 const tB = utils.getTeam(this.state.blue.id); const tR = utils.getTeam(this.state.red.id);
 
                 document.getElementById('match-blue-name').innerText = tB.id; document.getElementById('match-red-name').innerText = tR.id;
@@ -2595,6 +2624,7 @@
                 document.getElementById('res-red-name').innerText = utils.getTeam(draft.state.redId).name;
                 document.getElementById('res-blue-score').innerText = this.state.blue.kills;
                 document.getElementById('res-red-score').innerText = this.state.red.kills;
+                document.getElementById('res-series-bo-text').innerText = `SERIES SCORE (BO${series.match.bo})`;
                 document.getElementById('res-series-score').innerHTML = `<span class="text-lck-blue">${blueSeriesScore}</span>:<span class="text-lck-red">${redSeriesScore}</span>`;
                 
                 const m = Math.floor(this.state.time/60).toString().padStart(2,'0'); const s = (this.state.time%60).toString().padStart(2,'0');
@@ -2678,14 +2708,13 @@
                 document.getElementById('view-result').classList.add('hidden');
                 state.activeSeries.set++;
                 
-                // 플레이어가 이전 세트에서 승리했는지 확인합니다.
                 const isPlayerWin = document.getElementById('res-title').innerText === 'VICTORY';
                 
-                // 플레이어가 패배했을 경우 직접 진영을 선택합니다.
+                // If player lost the last set, the player picks side
                 if (!isPlayerWin) {
                     app.showSideSelectModal();
                 } else {
-                    // 플레이어가 승리했을 경우, 패배한 AI(적)가 진영을 선택합니다. (여기서는 랜덤으로 처리)
+                    // If player won the last set, the AI picks side (simulated as random selection here)
                     const enemyId = state.activeSeries.match.t1 === state.playerTeamId ? state.activeSeries.match.t2 : state.activeSeries.match.t1;
                     const aiPickBlue = Math.random() < 0.5;
                     app.initDraft(aiPickBlue ? enemyId : state.playerTeamId, aiPickBlue ? state.playerTeamId : enemyId);
