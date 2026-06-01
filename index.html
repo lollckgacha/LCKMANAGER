@@ -150,7 +150,7 @@
 
         .player-panel { background: linear-gradient(90deg, rgba(15,15,20,0.95) 0%, rgba(10,10,15,0.8) 100%); border-right: 2px solid #222; }
         .player-panel-red { background: linear-gradient(270deg, rgba(15,15,20,0.95) 0%, rgba(10,10,15,0.8) 100%); border-left: 2px solid #222; }
-        .ingame-portrait { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #555; }
+        .ingame-portrait { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #555; transition: filter 0.3s; }
     </style>
 </head>
 <body>
@@ -161,7 +161,7 @@
         <!-- SCREEN 0: LOADING -->
         <div id="screen-loading" class="screen active items-center justify-center bg-lck-dark relative">
             <div class="absolute inset-0 bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-5 bg-cover"></div>
-            <div class="z-10 flex flex-col items-center gap-6">
+            <div class="z-10 flex flex-col items-center justify-center h-full w-full gap-6 text-center">
                 <i class="fa-solid fa-spinner fa-spin text-6xl text-lck-accent mb-2"></i>
                 <h2 class="text-2xl font-black text-white tracking-widest uppercase">데이터 에셋 불러오는 중...</h2>
                 <div class="text-lck-accent font-bold text-3xl" id="loading-pct">0%</div>
@@ -217,7 +217,9 @@
         <!-- SCREEN 1: TITLE -->
         <div id="screen-title" class="screen items-center justify-center bg-[url('https://images.contentstack.io/v3/assets/blt731acb42bb3d1659/blt563ae02bb395cb31/60882f0592ba470f6b47c0c1/LCK_Logo_2021.png')] bg-no-repeat bg-center bg-opacity-20 bg-cover relative">
             <div class="absolute inset-0 bg-black/80"></div>
-            <div class="z-10 flex flex-col items-center gap-4 text-center">
+            <!-- 화면 전체 중앙 정렬을 위한 래퍼 추가 및 수정 -->
+            <div class="z-10 flex flex-col items-center justify-center h-full w-full gap-4 text-center pb-12">
+                <img src="logo.svg" onerror="this.style.display='none'" class="h-24 mb-2 drop-shadow-lg" alt="Logo">
                 <h1 class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-lck-accent to-yellow-200 tracking-tighter drop-shadow-lg">
                     LCK 매니저
                 </h1>
@@ -231,20 +233,16 @@
                         이어 하기
                     </button>
                 </div>
-            </div>
 
-            <div class="w-full max-w-sm mt-6 bg-black p-4 rounded-xl border border-lck-accent text-left shadow-[0_0_15px_rgba(200,155,60,0.15)] selectable-text relative z-20">
-                <h3 class="font-extrabold text-lck-accent mb-2 text-sm border-b border-gray-800 pb-2 flex items-center gap-1.5">
-                    <i class="fa-solid fa-bullhorn"></i> 제작자 공지사항
-                </h3>
-                <ul class="list-disc pl-5 space-y-1.5 text-xs text-white font-medium leading-relaxed transition-colors">
-                    <li>데이터 최신화 요청, 버그 제보, 각종 피드백 및 아이디어 제공은 아래 이메일로 제보 부탁드립니다.</li>
-                    <li>각종 문의: <span class="text-lck-accent font-bold">lollckgacha@gmail.com</span></li>
-                </ul>
-            </div>
-            
-            <div class="mt-8 text-sm text-gray-500 selectable-text bg-black/50 px-4 py-2 rounded-full border border-gray-800 relative z-20">
-                
+                <div class="w-full max-w-sm mt-6 bg-black p-4 rounded-xl border border-lck-accent text-left shadow-[0_0_15px_rgba(200,155,60,0.15)] selectable-text relative z-20">
+                    <h3 class="font-extrabold text-lck-accent mb-2 text-sm border-b border-gray-800 pb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-bullhorn"></i> 제작자 공지사항
+                    </h3>
+                    <ul class="list-disc pl-5 space-y-1.5 text-xs text-white font-medium leading-relaxed transition-colors">
+                        <li>데이터 최신화 요청, 버그 제보, 각종 피드백 및 아이디어 제공은 아래 이메일로 제보 부탁드립니다.</li>
+                        <li>각종 문의: <span class="text-lck-accent font-bold">lollckgacha@gmail.com</span></li>
+                    </ul>
+                </div>
             </div>
         </div>
 
@@ -320,7 +318,6 @@
                     <!-- Tab: Dashboard -->
                     <section id="view-dashboard" class="view-section active gap-6">
                         <div class="grid grid-cols-3 gap-6 h-full">
-                            <!-- News Feed -->
                             <div class="col-span-2 bg-lck-panel border border-gray-800 rounded-lg p-5 flex flex-col">
                                 <h3 class="text-lg font-bold text-white border-b border-gray-700 pb-2 mb-4 flex justify-between">
                                     <span><i class="fa-regular fa-newspaper mr-2 text-lck-accent"></i>LCK 뉴스</span>
@@ -329,7 +326,6 @@
                             </div>
                             
                             <div class="flex flex-col gap-6">
-                                <!-- Next Match -->
                                 <div class="bg-lck-panel border border-gray-800 rounded-lg p-5">
                                     <h3 class="text-sm text-gray-400 mb-2">다음 경기 정보</h3>
                                     <div class="flex justify-between items-center mb-4">
@@ -347,7 +343,6 @@
                                     <div id="msg-wait-match" class="text-center text-sm text-gray-500 hidden">일정을 진행해주세요.</div>
                                 </div>
                                 
-                                <!-- Mini Standings -->
                                 <div class="bg-lck-panel border border-gray-800 rounded-lg p-5 flex-1 flex flex-col">
                                     <h3 class="text-sm font-bold text-white border-b border-gray-700 pb-2 mb-2">시즌 성적 요약</h3>
                                     <div id="dash-standings" class="flex-1 flex flex-col gap-2 text-sm overflow-y-auto pr-2"></div>
@@ -362,9 +357,7 @@
                             <h2 class="text-2xl font-bold text-white">선발 로스터</h2>
                             <p class="text-sm text-gray-400">라인별로 출전할 5명을 드래그 앤 드롭으로 배치하세요.</p>
                         </div>
-                        
                         <div class="grid grid-cols-5 gap-4" id="roster-starters"></div>
-
                         <div class="mt-4 pt-4 border-t border-gray-800 flex-1 overflow-y-auto">
                             <h2 class="text-xl font-bold text-white mb-4">2군 로스터</h2>
                             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="roster-subs"></div>
@@ -607,49 +600,61 @@
                         </div>
                     </section>
 
-                    <!-- Match Result Modal -->
+                    <!-- Match Result Modal (스크롤 가능 및 와이드 바그래프 복원) -->
                     <div id="view-result" class="hidden absolute inset-0 bg-black/95 z-50 flex items-center justify-center backdrop-blur-sm">
-                        <div class="bg-lck-panel border border-gray-700 p-8 rounded-xl w-[1000px] max-w-[95vw] max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col items-center">
-                            <div id="res-subtitle" class="text-gray-400 font-bold tracking-widest mb-1 text-sm">SET 1 RESULT</div>
-                            <h2 class="text-6xl font-black mb-6 tracking-widest" id="res-title">VICTORY</h2>
+                        <div class="bg-lck-panel border border-gray-700 p-8 rounded-xl w-[1000px] max-w-[95%] max-h-[95vh] flex flex-col items-center shadow-2xl relative">
                             
-                            <div class="flex justify-between items-center w-full bg-gray-900 p-4 rounded-lg mb-6 border border-gray-800">
-                                <div class="text-center w-1/3">
-                                    <div id="res-blue-name" class="text-sm text-gray-400 mb-1">TEAM BLUE</div>
-                                    <div id="res-blue-score" class="text-5xl font-bold text-lck-blue">0</div>
+                            <!-- 스크롤 가능한 본문 영역 -->
+                            <div class="w-full flex-1 overflow-y-auto flex flex-col items-center pr-2">
+                                <div id="res-subtitle" class="text-gray-400 font-bold tracking-widest mb-1 text-sm shrink-0">SET 1 RESULT</div>
+                                <h2 class="text-6xl font-black mb-6 tracking-widest shrink-0" id="res-title">VICTORY</h2>
+                                
+                                <div class="flex justify-between items-center w-full bg-gray-900 p-4 rounded-lg mb-6 border border-gray-800 shrink-0">
+                                    <div class="text-center w-1/3">
+                                        <div id="res-blue-name" class="text-sm text-gray-400 mb-1">TEAM BLUE</div>
+                                        <div id="res-blue-score" class="text-5xl font-bold text-lck-blue">0</div>
+                                    </div>
+                                    <div class="w-1/3 text-center flex flex-col items-center">
+                                        <div class="text-xs text-gray-500 mb-1">SERIES SCORE</div>
+                                        <div id="res-series-score" class="text-3xl font-bold text-white tracking-widest mb-1">0 : 0</div>
+                                        <div class="text-[11px] text-gray-600 bg-gray-800 px-3 py-1 rounded-full border border-gray-700">TIME: <span id="res-time">00:00</span></div>
+                                    </div>
+                                    <div class="text-center w-1/3">
+                                        <div id="res-red-name" class="text-sm text-gray-400 mb-1">TEAM RED</div>
+                                        <div id="res-red-score" class="text-5xl font-bold text-lck-red">0</div>
+                                    </div>
                                 </div>
-                                <div class="w-1/3 text-center flex flex-col items-center">
-                                    <div class="text-xs text-gray-500 mb-1">SERIES SCORE</div>
-                                    <div id="res-series-score" class="text-3xl font-bold text-white tracking-widest mb-1">0 : 0</div>
-                                    <div class="text-[11px] text-gray-600 bg-gray-800 px-3 py-1 rounded-full border border-gray-700">TIME: <span id="res-time">00:00</span></div>
+
+                                <!-- Detailed Stats Table (마주보는 16:9 와이드 비율 형태) -->
+                                <div class="w-full mb-6 bg-gray-900/50 p-6 rounded-lg border border-gray-800 shrink-0">
+                                    <div class="text-center font-bold text-gray-400 mb-6 tracking-widest text-sm">TOTAL DAMAGE DEALT & MATCH STATS</div>
+                                    <div id="res-stats-body" class="flex flex-col gap-5">
+                                        <!-- Injected via JS -->
+                                    </div>
                                 </div>
-                                <div class="text-center w-1/3">
-                                    <div id="res-red-name" class="text-sm text-gray-400 mb-1">TEAM RED</div>
-                                    <div id="res-red-score" class="text-5xl font-bold text-lck-red">0</div>
+
+                                <!-- Feedback Section for Next Set -->
+                                <div id="res-feedback-section" class="w-full border-t border-gray-700 pt-6 mb-6 shrink-0">
+                                    <h3 class="text-white text-sm font-bold mb-3 text-center">다음 세트 감독 전술 지시</h3>
+                                    <div class="flex justify-center gap-3">
+                                        <button onclick="match.setTactic('balance', this); sfx.play('click');" class="tactic-btn active bg-gray-700 border border-lck-accent text-white px-6 py-2 rounded text-sm font-bold transition">기본 (밸런스)</button>
+                                        <button onclick="match.setTactic('aggro', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">공격적 (교전)</button>
+                                        <button onclick="match.setTactic('safe', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">수비적 (성장)</button>
+                                        <button onclick="match.setTactic('obj', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">오브젝트 집중</button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="w-full mb-6 bg-gray-900/50 p-6 rounded-lg border border-gray-800">
-                                <div class="text-center font-bold text-gray-400 mb-6 tracking-widest text-sm">TOTAL DAMAGE DEALT & MATCH STATS</div>
-                                <div id="res-stats-body" class="flex flex-col gap-5"></div>
+                            <!-- 고정된 하단 버튼 영역 -->
+                            <div class="w-full mt-4 shrink-0">
+                                <button id="btn-res-next-set" onclick="match.startNextSet(); sfx.play('click');" class="bg-lck-blue text-white font-bold py-3 px-12 rounded w-full hover:bg-blue-500 mb-2 shadow-[0_0_15px_rgba(11,198,227,0.4)] transition">
+                                    다음 세트 진입
+                                </button>
+                                <button id="btn-res-end-match" onclick="app.endMatch(); sfx.play('click');" class="hidden bg-lck-accent text-black font-bold py-3 px-12 rounded w-full hover:bg-yellow-500 shadow-[0_0_15px_rgba(200,155,60,0.4)] transition">
+                                    매치 종료 및 대시보드 복귀
+                                </button>
                             </div>
-
-                            <div id="res-feedback-section" class="w-full border-t border-gray-700 pt-6 mb-6">
-                                <h3 class="text-white text-sm font-bold mb-3 text-center">다음 세트 감독 전술 지시</h3>
-                                <div class="flex justify-center gap-3">
-                                    <button onclick="match.setTactic('balance', this); sfx.play('click');" class="tactic-btn active bg-gray-700 border border-lck-accent text-white px-6 py-2 rounded text-sm font-bold transition">기본 (밸런스)</button>
-                                    <button onclick="match.setTactic('aggro', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">공격적 (교전)</button>
-                                    <button onclick="match.setTactic('safe', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">수비적 (성장)</button>
-                                    <button onclick="match.setTactic('obj', this); sfx.play('click');" class="tactic-btn bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 px-6 py-2 rounded text-sm font-bold transition">오브젝트 집중</button>
-                                </div>
-                            </div>
-
-                            <button id="btn-res-next-set" onclick="match.startNextSet(); sfx.play('click');" class="bg-lck-blue text-white font-bold py-3 px-12 rounded w-full hover:bg-blue-500 mb-2 shadow-[0_0_15px_rgba(11,198,227,0.4)] transition">
-                                다음 세트 진입
-                            </button>
-                            <button id="btn-res-end-match" onclick="app.endMatch(); sfx.play('click');" class="hidden bg-lck-accent text-black font-bold py-3 px-12 rounded w-full hover:bg-yellow-500 shadow-[0_0_15px_rgba(200,155,60,0.4)] transition">
-                                매치 종료 및 대시보드 복귀
-                            </button>
+                            
                         </div>
                     </div>
                 </main>
@@ -835,7 +840,6 @@
                 return `<div ${idAttr} class="${extraClass} rounded flex items-center justify-center font-bold text-white shadow-inner shrink-0" style="background-color: ${t.color}">${t.name.substring(0,1)}</div>`;
             },
             
-            // 역할군 가중치에 따라 랜덤하게 역할 선택 (KDA 배분용)
             getWeightedRole: (weights) => {
                 let sum = 0;
                 for (let r in weights) sum += weights[r];
@@ -845,6 +849,19 @@
                     rand -= weights[r];
                 }
                 return 'SUP';
+            },
+
+            // 생존자들 중에서만 가중치 기반으로 역할을 뽑는 함수
+            getWeightedRoleForAlive: (aliveRoles, weights) => {
+                if (aliveRoles.length === 0) return null;
+                let sum = 0;
+                for (let r of aliveRoles) sum += weights[r];
+                let rand = Math.random() * sum;
+                for (let r of aliveRoles) {
+                    if (rand < weights[r]) return r;
+                    rand -= weights[r];
+                }
+                return aliveRoles[aliveRoles.length - 1];
             }
         };
 
@@ -1415,7 +1432,6 @@
                 }
             },
 
-            // UI 렌더링 업데이트
             updateUI() {
                 const t = utils.getTeam(state.playerTeamId);
                 document.getElementById('top-team-name').innerText = t.name;
@@ -1520,7 +1536,7 @@
                 const pc = state.playerConditions[pId];
                 
                 if (isStarterZone && (pc && pc.cond === 'injured')) {
-                    this.toast('부상 중인 선수는 경기에 출전할 수 없습니다.'); return;
+                    this.toast('부상 중인 선수는 경기에 출전할 수 무 없습니다.'); return;
                 }
                 sfx.play('click');
                 const existingStarterId = state.roster.starters[targetRole];
@@ -2276,17 +2292,11 @@
         // MATCH SIMULATOR
         // ==========================================
         window.match = {
-            // 실제 LCK 데이터를 반영한 역할군별 가중치 (핵심 기능 업데이트)
             roleParams: {
-                // 킬 확률: 원딜(35%)과 미드(28%)가 대부분 킬을 가져가며 서포터는 2%로 극한으로 낮춤
                 kill: { TOP: 20, JUG: 15, MID: 28, BOT: 35, SUP: 2 },
-                // 데스 확률: 패배/불리한 상황 시 죽기 쉬운 역할군. 서포터, 원딜, 정글 비중을 높임
                 death: { TOP: 20, JUG: 20, MID: 15, BOT: 25, SUP: 20 },
-                // 어시스트 확률(0~1.0): 서포터는 거의 무조건 어시스트에 관여(85%)
                 assist: { TOP: 0.35, JUG: 0.65, MID: 0.45, BOT: 0.35, SUP: 0.85 },
-                // 데미지 배율 (DPM): 원딜 1.1, 미드 0.95, 탑 0.85, 서폿 0.25 로 현실성 부여
                 dmg: { TOP: 0.85, JUG: 0.6, MID: 0.95, BOT: 1.1, SUP: 0.25 },
-                // CS 수급 배율
                 cs: { TOP: 1.0, JUG: 0.8, MID: 1.1, BOT: 1.1, SUP: 0.15 }
             },
 
@@ -2297,6 +2307,16 @@
                 nextElderTime: null, elderAlive: false,
                 blue: { id: null, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: [], stats: {} },
                 red: { id: null, kills: 0, gold: 0, dragons: [], towers: 0, barons: 0, grubs: 0, champs: [], stats: {} }
+            },
+
+            getRespawnTime(gameTime) {
+                let maxTime = 2400; // 40 minutes
+                let timeRatio = Math.min(gameTime / maxTime, 1);
+                return Math.floor(10 + timeRatio * 50); // 10s ~ 60s
+            },
+
+            getAliveRoles(team) {
+                return window.DATA.roles.filter(r => this.state.time >= team.stats[r].deadUntil);
             },
 
             init() {
@@ -2313,8 +2333,8 @@
                 this.setSpeed(2);
 
                 window.DATA.roles.forEach(r => {
-                    this.state.blue.stats[r] = { k: 0, d: 0, a: 0, dmg: 0, cs: 0, id: this.state.blue.champs[r] };
-                    this.state.red.stats[r] = { k: 0, d: 0, a: 0, dmg: 0, cs: 0, id: this.state.red.champs[r] };
+                    this.state.blue.stats[r] = { k: 0, d: 0, a: 0, dmg: 0, cs: 0, id: this.state.blue.champs[r], deadUntil: 0 };
+                    this.state.red.stats[r] = { k: 0, d: 0, a: 0, dmg: 0, cs: 0, id: this.state.red.champs[r], deadUntil: 0 };
                 });
 
                 document.getElementById('log-set-num').innerText = state.activeSeries.set;
@@ -2360,11 +2380,12 @@
                         html += `
                             <div class="player-panel ${side==='R'?'player-panel-red':''} flex items-center p-2 rounded gap-3 h-16 w-full relative overflow-hidden" id="panel-${side}-${r}">
                                 <div class="absolute inset-0 bg-gradient-to-r ${side==='B'?'from-lck-blue/20':'from-lck-red/20'} to-transparent opacity-0 transition-opacity" id="hp-${side}-${r}"></div>
-                                ${side==='B' ? `<img src="${utils.getChampImg(c.id)}" class="ingame-portrait bg-black z-10 shrink-0">` : ''}
+                                ${side==='B' ? `<img src="${utils.getChampImg(c.id)}" id="img-B-${r}" class="ingame-portrait bg-black z-10 shrink-0">` : ''}
                                 <div class="flex-1 flex flex-col justify-center z-10 ${side==='R'?'items-end text-right':''}">
                                     <div class="text-xs font-bold text-white truncate w-32">${p.name}</div>
+                                    <div class="text-[10px] text-gray-400 font-mono mt-0.5 tracking-tighter" id="kda-${side}-${r}">0/0/0</div>
                                 </div>
-                                ${side==='R' ? `<img src="${utils.getChampImg(c.id)}" class="ingame-portrait bg-black z-10 shrink-0">` : ''}
+                                ${side==='R' ? `<img src="${utils.getChampImg(c.id)}" id="img-R-${r}" class="ingame-portrait bg-black z-10 shrink-0">` : ''}
                             </div>
                         `;
                     });
@@ -2505,20 +2526,20 @@
                 }
 
                 // ==========================================
-                // 현실적인 DPM/CS 생성 (시간에 비례하여 패시브 누적)
+                // 현실적인 DPM/CS 생성 (살아있는 챔피언만)
                 // ==========================================
                 let timeMin = this.state.time / 60;
                 window.DATA.roles.forEach(role => {
-                    // 기본 틱 당 데미지: 시간이 지날수록 데미지 증가, 역할군별 배율(원딜 최고, 서폿 최저) 적용
-                    let tickDmgB = (25 + timeMin * 2) * this.roleParams.dmg[role] * (Math.random() * 0.4 + 0.8);
-                    let tickDmgR = (25 + timeMin * 2) * this.roleParams.dmg[role] * (Math.random() * 0.4 + 0.8);
-                    
-                    this.state.blue.stats[role].dmg += tickDmgB;
-                    this.state.red.stats[role].dmg += tickDmgR;
-                    
-                    // 미니언(CS) 파밍
-                    this.state.blue.stats[role].cs += (Math.random() * 3) * this.roleParams.cs[role];
-                    this.state.red.stats[role].cs += (Math.random() * 3) * this.roleParams.cs[role];
+                    if (this.state.time >= this.state.blue.stats[role].deadUntil) {
+                        let tickDmgB = (25 + timeMin * 2) * this.roleParams.dmg[role] * (Math.random() * 0.4 + 0.8);
+                        this.state.blue.stats[role].dmg += tickDmgB;
+                        this.state.blue.stats[role].cs += (Math.random() * 3) * this.roleParams.cs[role];
+                    }
+                    if (this.state.time >= this.state.red.stats[role].deadUntil) {
+                        let tickDmgR = (25 + timeMin * 2) * this.roleParams.dmg[role] * (Math.random() * 0.4 + 0.8);
+                        this.state.red.stats[role].dmg += tickDmgR;
+                        this.state.red.stats[role].cs += (Math.random() * 3) * this.roleParams.cs[role];
+                    }
                 });
 
                 let bluePwr = window.DATA.roles.reduce((s, ro) => {
@@ -2542,68 +2563,76 @@
                 if (Math.random() < 0.03) blueWinChance = blueWinChance > 0.5 ? 0.3 : 0.7;
 
                 // ==========================================
-                // 한타 및 오브젝트 싸움 로직
+                // 한타 및 오브젝트 싸움 로직 (살아있는 인원만 참여)
                 // ==========================================
                 if (this.state.time > 300 && r < 0.08 && (this.state.dragonAlive || this.state.baronAlive || this.state.elderAlive)) {
                     const isBlueWin = Math.random() < blueWinChance + (isObj?0.15:-0.1);
                     const winner = isBlueWin ? this.state.blue : this.state.red;
                     const loser = isBlueWin ? this.state.red : this.state.blue;
                     
-                    const deaths = Math.floor(Math.random()*3)+1;
-                    for(let i=0; i<deaths; i++) {
-                        winner.kills++; winner.gold += 300;
-                        
-                        // 역할군별 킬/데스 배분을 유틸 가중치 함수로 적용
-                        const wRole = utils.getWeightedRole(this.roleParams.kill);
-                        const lRole = utils.getWeightedRole(this.roleParams.death);
-                        
-                        winner.stats[wRole].k++; 
-                        // 킬 발생 시 순간 버스트 데미지 반영
-                        winner.stats[wRole].dmg += (600 + Math.random()*400) * this.roleParams.dmg[wRole]; 
-                        loser.stats[lRole].d++;
-                        
-                        // 어시스트 부여 확률 및 교전 데미지
-                        window.DATA.roles.forEach(role => {
-                            if(role !== wRole && Math.random() < this.roleParams.assist[role] + 0.1) {
-                                winner.stats[role].a++;
-                                winner.stats[role].dmg += (300 + Math.random()*200) * this.roleParams.dmg[role];
-                            }
-                        });
-                        
-                        const killer = winner.champs[wRole];
-                        const victim = loser.champs[lRole];
-                        setTimeout(() => this.showKillLog(killer, victim, isBlueWin), i * 300);
-                    }
-                    
-                    if(this.state.elderAlive) {
-                        winner.gold += 1000;
-                        this.state.elderAlive = false;
-                        this.state.nextElderTime = this.state.time + 360; 
-                        this.showAnnouncer(winner.id, '장로 드래곤 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
-                        this.log(`장로 드래곤 처치! ${isBlueWin?'블루':'레드'} 진영 버프 획득.`, isBlueWin?'blue':'red');
-                        sfx.play('kill');
-                    } else if (this.state.baronAlive) {
-                        winner.barons++; winner.gold += 1500;
-                        this.state.baronAlive = false;
-                        this.state.nextBaronTime = this.state.time + 360; 
-                        this.showAnnouncer(winner.id, '바론 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
-                        this.log(`바론 처치! ${isBlueWin?'블루':'레드'}.`, isBlueWin?'blue':'red');
-                        sfx.play('kill');
-                    } else if (this.state.dragonAlive) {
-                        const dColors = ['text-blue-400', 'text-red-500', 'text-yellow-700', 'text-teal-300', 'text-purple-400'];
-                        winner.dragons.push(dColors[Math.floor(Math.random()*dColors.length)]);
-                        winner.gold += 500;
-                        this.state.dragonAlive = false;
-                        
-                        if(winner.dragons.length === 4) {
-                            this.state.nextElderTime = this.state.time + 360; 
-                            this.log(`드래곤 처치! ${isBlueWin?'블루':'레드'} 진영 영혼 획득! 6분 뒤 장로 드래곤이 등장합니다.`, isBlueWin?'blue':'red');
-                        } else {
-                            this.state.nextDragonTime = this.state.time + 300; 
-                            this.log(`드래곤 처치! ${isBlueWin?'블루':'레드'} 진영 승리.`, isBlueWin?'blue':'red');
+                    let aliveWinners = this.getAliveRoles(winner);
+                    let aliveLosers = this.getAliveRoles(loser);
+
+                    if (aliveWinners.length > 0) {
+                        const deaths = Math.min(Math.floor(Math.random()*3)+1, aliveLosers.length);
+                        for(let i=0; i<deaths; i++) {
+                            if(aliveWinners.length === 0 || aliveLosers.length === 0) break;
+
+                            winner.kills++; winner.gold += 300;
+                            
+                            const wRole = utils.getWeightedRoleForAlive(aliveWinners, this.roleParams.kill);
+                            const lRole = utils.getWeightedRoleForAlive(aliveLosers, this.roleParams.death);
+                            
+                            // 같은 전투 내 중복 사망 방지
+                            aliveLosers.splice(aliveLosers.indexOf(lRole), 1);
+                            
+                            winner.stats[wRole].k++; 
+                            winner.stats[wRole].dmg += (600 + Math.random()*400) * this.roleParams.dmg[wRole]; 
+                            loser.stats[lRole].d++;
+                            loser.stats[lRole].deadUntil = this.state.time + this.getRespawnTime(this.state.time);
+                            
+                            aliveWinners.forEach(role => {
+                                if(role !== wRole && Math.random() < this.roleParams.assist[role] + 0.1) {
+                                    winner.stats[role].a++;
+                                    winner.stats[role].dmg += (300 + Math.random()*200) * this.roleParams.dmg[role];
+                                }
+                            });
+                            
+                            const killer = winner.champs[wRole];
+                            const victim = loser.champs[lRole];
+                            setTimeout(() => this.showKillLog(killer, victim, isBlueWin), i * 300);
                         }
-                        this.showAnnouncer(winner.id, '드래곤 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
-                        sfx.play('kill');
+                        
+                        if(this.state.elderAlive) {
+                            winner.gold += 1000;
+                            this.state.elderAlive = false;
+                            this.state.nextElderTime = this.state.time + 360; 
+                            this.showAnnouncer(winner.id, '장로 드래곤 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
+                            this.log(`장로 드래곤 처치! ${isBlueWin?'블루':'레드'} 진영 버프 획득.`, isBlueWin?'blue':'red');
+                            sfx.play('kill');
+                        } else if (this.state.baronAlive) {
+                            winner.barons++; winner.gold += 1500;
+                            this.state.baronAlive = false;
+                            this.state.nextBaronTime = this.state.time + 360; 
+                            this.showAnnouncer(winner.id, '바론 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
+                            this.log(`바론 처치! ${isBlueWin?'블루':'레드'}.`, isBlueWin?'blue':'red');
+                            sfx.play('kill');
+                        } else if (this.state.dragonAlive) {
+                            const dColors = ['text-blue-400', 'text-red-500', 'text-yellow-700', 'text-teal-300', 'text-purple-400'];
+                            winner.dragons.push(dColors[Math.floor(Math.random()*dColors.length)]);
+                            winner.gold += 500;
+                            this.state.dragonAlive = false;
+                            
+                            if(winner.dragons.length === 4) {
+                                this.state.nextElderTime = this.state.time + 360; 
+                                this.log(`드래곤 처치! ${isBlueWin?'블루':'레드'} 진영 영혼 획득! 6분 뒤 장로 드래곤이 등장합니다.`, isBlueWin?'blue':'red');
+                            } else {
+                                this.state.nextDragonTime = this.state.time + 300; 
+                                this.log(`드래곤 처치! ${isBlueWin?'블루':'레드'} 진영 승리.`, isBlueWin?'blue':'red');
+                            }
+                            this.showAnnouncer(winner.id, '드래곤 처치!', isBlueWin ? 'text-lck-blue' : 'text-lck-red');
+                            sfx.play('kill');
+                        }
                     }
                 }
                 // ==========================================
@@ -2614,33 +2643,38 @@
                     const atkSide = isBlueAtk ? this.state.blue : this.state.red;
                     const defSide = isBlueAtk ? this.state.red : this.state.blue;
                     
-                    // 가중치에 따라 킬러와 데스자 배분
-                    const atkRole = utils.getWeightedRole(this.roleParams.kill);
-                    const defRole = utils.getWeightedRole(this.roleParams.death);
-                    const killer = atkSide.champs[atkRole];
-                    const victim = defSide.champs[defRole];
-                    
-                    atkSide.kills++; atkSide.gold += 300;
-                    
-                    atkSide.stats[atkRole].k++;
-                    atkSide.stats[atkRole].dmg += (500 + Math.random()*500) * this.roleParams.dmg[atkRole];
-                    defSide.stats[defRole].d++;
-                    this.flashHpBar(isBlueAtk ? 'R' : 'B', defRole);
+                    let aliveAtk = this.getAliveRoles(atkSide);
+                    let aliveDef = this.getAliveRoles(defSide);
 
-                    window.DATA.roles.forEach(role => {
-                        if(role !== atkRole && Math.random() < this.roleParams.assist[role]) { 
-                            atkSide.stats[role].a++; 
-                            atkSide.stats[role].dmg += (200 + Math.random()*200) * this.roleParams.dmg[role]; 
-                        }
-                    });
-                    
-                    const killerTeamName = utils.getTeam(atkSide.id).name;
-                    const playerObj = window.DATA.players.find(p => p.teamId === atkSide.id && p.role.includes(atkRole));
-                    const playerName = playerObj ? playerObj.name : atkRole;
+                    if (aliveAtk.length > 0 && aliveDef.length > 0) {
+                        const atkRole = utils.getWeightedRoleForAlive(aliveAtk, this.roleParams.kill);
+                        const defRole = utils.getWeightedRoleForAlive(aliveDef, this.roleParams.death);
+                        const killer = atkSide.champs[atkRole];
+                        const victim = defSide.champs[defRole];
+                        
+                        atkSide.kills++; atkSide.gold += 300;
+                        
+                        atkSide.stats[atkRole].k++;
+                        atkSide.stats[atkRole].dmg += (500 + Math.random()*500) * this.roleParams.dmg[atkRole];
+                        defSide.stats[defRole].d++;
+                        defSide.stats[defRole].deadUntil = this.state.time + this.getRespawnTime(this.state.time);
+                        this.flashHpBar(isBlueAtk ? 'R' : 'B', defRole);
 
-                    this.showKillLog(killer, victim, isBlueAtk);
-                    this.log(`${killerTeamName} ${playerName}의 킬!`, isBlueAtk?'blue':'red');
-                    sfx.play('kill');
+                        aliveAtk.forEach(role => {
+                            if(role !== atkRole && Math.random() < this.roleParams.assist[role]) { 
+                                atkSide.stats[role].a++; 
+                                atkSide.stats[role].dmg += (200 + Math.random()*200) * this.roleParams.dmg[role]; 
+                            }
+                        });
+                        
+                        const killerTeamName = utils.getTeam(atkSide.id).name;
+                        const playerObj = window.DATA.players.find(p => p.teamId === atkSide.id && p.role.includes(atkRole));
+                        const playerName = playerObj ? playerObj.name : atkRole;
+
+                        this.showKillLog(killer, victim, isBlueAtk);
+                        this.log(`${killerTeamName} ${playerName}의 킬!`, isBlueAtk?'blue':'red');
+                        sfx.play('kill');
+                    }
                 } 
                 // ==========================================
                 // 포탑 및 넥서스 파괴
@@ -2658,7 +2692,7 @@
                         const isBluePush = Math.random() < pushWinChance;
                         const atkSide = isBluePush ? this.state.blue : this.state.red;
                         
-                        if (atkSide.towers <= 11) { 
+                        if (this.getAliveRoles(atkSide).length > 0 && atkSide.towers <= 11) { 
                             if (atkSide.towers < 11) {
                                 const tEl = document.getElementById(`t-${isBluePush?'r':'b'}-${atkSide.towers}`);
                                 if(tEl) tEl.classList.add('destroyed');
@@ -2732,6 +2766,28 @@
                 };
                 renderDragons(this.state.blue.dragons, 'match-blue-dragons');
                 renderDragons(this.state.red.dragons, 'match-red-dragons');
+
+                // KDA 및 초상화 부활 상태 업데이트
+                window.DATA.roles.forEach(r => {
+                    const bSt = this.state.blue.stats[r];
+                    const rSt = this.state.red.stats[r];
+                    
+                    const bKdaEl = document.getElementById(`kda-B-${r}`);
+                    const rKdaEl = document.getElementById(`kda-R-${r}`);
+                    const bImgEl = document.getElementById(`img-B-${r}`);
+                    const rImgEl = document.getElementById(`img-R-${r}`);
+                    
+                    if(bSt && bKdaEl) {
+                        const isDead = this.state.time < bSt.deadUntil;
+                        bKdaEl.innerText = isDead ? `${bSt.k}/${bSt.d}/${bSt.a} (부활 ${bSt.deadUntil - this.state.time}초)` : `${bSt.k}/${bSt.d}/${bSt.a}`;
+                        if(bImgEl) bImgEl.style.filter = isDead ? 'grayscale(100%) brightness(40%)' : 'none';
+                    }
+                    if(rSt && rKdaEl) {
+                        const isDead = this.state.time < rSt.deadUntil;
+                        rKdaEl.innerText = isDead ? `${rSt.k}/${rSt.d}/${rSt.a} (부활 ${rSt.deadUntil - this.state.time}초)` : `${rSt.k}/${rSt.d}/${rSt.a}`;
+                        if(rImgEl) rImgEl.style.filter = isDead ? 'grayscale(100%) brightness(40%)' : 'none';
+                    }
+                });
             },
 
             showResult(isBlueWin) {
@@ -2747,7 +2803,7 @@
                 
                 document.getElementById('res-subtitle').innerText = `SET ${series.set} RESULT`;
                 document.getElementById('res-title').innerText = playerWonSet ? 'VICTORY' : 'DEFEAT';
-                document.getElementById('res-title').className = `text-5xl font-black mb-2 tracking-widest ${playerWonSet?'text-lck-blue':'text-lck-red'}`;
+                document.getElementById('res-title').className = `text-6xl font-black mb-6 tracking-widest ${playerWonSet?'text-lck-blue':'text-lck-red'} shrink-0`;
                 
                 const isHome = series.match.t1 === state.playerTeamId;
                 const blueSeriesScore = isHome && isPlayerBlue ? series.myScore : (isHome ? series.enScore : (!isHome && isPlayerBlue ? series.myScore : series.enScore));
@@ -2781,11 +2837,9 @@
                     const bW = (bSt.dmg / maxDmg) * 100;
                     const rW = (rSt.dmg / maxDmg) * 100;
 
-                    // 데미지 수치 K 단위 변환 (예: 24.0K)
                     const dispBDmg = (bSt.dmg / 1000).toFixed(1) + 'K';
                     const dispRDmg = (rSt.dmg / 1000).toFixed(1) + 'K';
                     
-                    // 선수 이름 가져오기
                     const bPlayer = window.DATA.players.find(p => p.teamId === draft.state.blueId && p.role.includes(r)) || { name: r };
                     const rPlayer = window.DATA.players.find(p => p.teamId === draft.state.redId && p.role.includes(r)) || { name: r };
 
